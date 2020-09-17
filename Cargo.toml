@@ -2,7 +2,7 @@
 
 [package]
 name = "js-sandbox"
-version = "0.1.0"
+version = "0.1.1"
 description = "Execute JavaScript code from Rust in a secure sandbox, and transport data to/from JS plug-ins."
 repository = "https://github.com/Bromeon/js-sandbox"
 authors = ["Jan Haller <bromeon@gmail.com>"]
