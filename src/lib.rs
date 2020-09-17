@@ -87,7 +87,7 @@
 //!
 //! fn main() -> Result<(), ErrBox> {
 //! 	let src = r#"
-//!		var total = '';
+//! 	var total = '';
 //! 	function append(str) { total += str; }
 //! 	function get()       { return total; }"#;
 //!

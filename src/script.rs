@@ -2,7 +2,7 @@
 
 use std::path::Path;
 
-use deno_core::{CoreIsolate, CoreIsolateState, ErrBox, StartupData, ZeroCopyBuf};
+use deno_core::{ErrBox, JsRuntime, OpState, RuntimeOptions, ZeroCopyBuf};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
@@ -13,7 +13,7 @@ use crate::JsValue;
 /// The code can be loaded from a file or from a string in memory.
 /// A typical usage pattern is to load a file with one or more JS function definitions, and then call those functions from Rust.
 pub struct Script {
-	isolate: CoreIsolate,
+	runtime: JsRuntime,
 	last_rid: u32,
 }
 
@@ -23,7 +23,7 @@ impl Script {
 	/// Initialize a script with the given JavaScript source code
 	///
 	/// Returns a new object on success, and an error in case of syntax or initialization error with the code.
-	pub fn from_string(js_code: &str) -> Result<Script, ErrBox> {
+	pub fn from_string(js_code: &str) -> Result<Self, ErrBox> {
 		// console.log() is not available by default -- add the most basic version with single argument (and no warn/info/... variants)
 		let all_code = "const console = { log: function(expr) { Deno.core.print(expr + '\\n', false); } };".to_string() + js_code;
 
@@ -33,7 +33,7 @@ impl Script {
 	/// Initialize a script by loading it from a .js file
 	///
 	/// Returns a new object on success. Fails if the file cannot be opened or in case of syntax or initialization error with the code.
-	pub fn from_file(file: impl AsRef<Path>) -> Result<Script, ErrBox> {
+	pub fn from_file(file: impl AsRef<Path>) -> Result<Self, ErrBox> {
 		let filename = file.as_ref().file_name().and_then(|s| s.to_str()).unwrap_or(Self::DEFAULT_FILENAME).to_owned();
 
 		match std::fs::read_to_string(file) {
@@ -74,11 +74,11 @@ impl Script {
 			Deno.core.jsonOpSync(\"__rust_return\", __rust_result);\
 		}}", f = fn_name, a = args);
 
-		self.isolate.execute(Self::DEFAULT_FILENAME, &js_code)?;
+		self.runtime.execute(Self::DEFAULT_FILENAME, &js_code)?;
 
-		let state_rc = CoreIsolate::state(&self.isolate);
-		let state = state_rc.borrow();
-		let mut table = state.resource_table.borrow_mut();
+		let state_rc = self.runtime.op_state();
+		let mut state = state_rc.borrow_mut();
+		let table = &mut state.resource_table;
 
 		// Get resource, and free slot (no longer needed)
 		let mut result: Box<JsValue> = table.remove(self.last_rid).unwrap();
@@ -87,20 +87,28 @@ impl Script {
 		Ok(result.take())
 	}
 
-	fn create_script(js_code: &str, js_filename: &str) -> Result<Script, ErrBox> {
-		let mut isolate = CoreIsolate::new(StartupData::None, false);
-		isolate.execute(js_filename, &js_code)?;
-		isolate.register_op_json_sync("__rust_return", Script::op_return);
+	fn create_script(js_code: &str, js_filename: &str) -> Result<Self, ErrBox> {
+		let options = RuntimeOptions {
+			module_loader: None,
+			startup_snapshot: None,
+			will_snapshot: false,
+			heap_limits: None,
+		};
 
-		Ok(Script { isolate, last_rid: 0 })
+		let mut runtime = JsRuntime::new(options);
+		runtime.execute(js_filename, &js_code)?;
+		runtime.register_op("__rust_return", deno_core::json_op_sync(Self::op_return));
+
+		Ok(Script { runtime, last_rid: 0 })
 	}
 
+
 	fn op_return(
-		state: &mut CoreIsolateState,
+		state: &mut OpState,
 		args: JsValue,
 		_buf: &mut [ZeroCopyBuf],
 	) -> Result<JsValue, ErrBox> {
-		let resource_table = &mut state.resource_table.borrow_mut();
+		let resource_table = &mut state.resource_table;
 		let _rid = resource_table.add("result", Box::new(args));
 		//assert_eq!(rid, self.last_rid);
 
