@@ -29,9 +29,9 @@ fn main() {
 A very basic application calls a JavaScript function `triple()` from Rust. It passes an argument and accepts a return value, both serialized via JSON:
 
 ```rust
-use js_sandbox::{Script, ErrBox};
+use js_sandbox::{Script, AnyError};
 
-fn main() -> Result<(), ErrBox> {
+fn main() -> Result<(), AnyError> {
 	let js_code = "function triple(a) { return 3 * a; }";
 	let mut script = Script::from_string(js_code)?;
 
@@ -46,7 +46,7 @@ fn main() -> Result<(), ErrBox> {
 An example that serializes a JSON object (Rust -> JS) and formats a string (JS -> Rust):
 
 ```rust
-use js_sandbox::{Script, ErrBox};
+use js_sandbox::{Script, AnyError};
 use serde::Serialize;
 
 #[derive(Serialize, PartialEq)]
@@ -55,7 +55,7 @@ struct Person {
 	age: u8,
 }
 
-fn main() -> Result<(), ErrBox> {
+fn main() -> Result<(), AnyError> {
 	let src = r#"
     function toString(person) {
         return "A person named " + person.name + " of age " + person.age;
@@ -78,9 +78,9 @@ It is possible to initialize a stateful JS script, and then use functions to mod
 This example appends a string in two calls, and then gets the result in a third call:
 
 ```rust
-use js_sandbox::{Script, ErrBox};
+use js_sandbox::{Script, AnyError};
 
-fn main() -> Result<(), ErrBox> {
+fn main() -> Result<(), AnyError> {
 	let src = r#"
 		var total = '';
 	function append(str) { total += str; }

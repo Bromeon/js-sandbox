@@ -1,8 +1,10 @@
 // Copyright (c) 2020 Jan Haller. zlib/libpng license.
 
-use deno_core::{ErrBox, JsError};
+use deno_core::error::JsError;
 
-pub fn expect_error<T>(result: Result<T, ErrBox>, error_type: &str) {
+use js_sandbox::AnyError;
+
+pub fn expect_error<T>(result: Result<T, AnyError>, error_type: &str) {
 	let err = match result {
 		Ok(_) => panic!("Call with {} must not succeed", error_type),
 		Err(e) => e

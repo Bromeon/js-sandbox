@@ -2,11 +2,11 @@
 
 use std::path::Path;
 
-use deno_core::{ErrBox, JsRuntime, OpState, RuntimeOptions, ZeroCopyBuf};
+use deno_core::{JsRuntime, OpState, RuntimeOptions, ZeroCopyBuf};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
-use crate::JsValue;
+use crate::{AnyError, JsValue};
 
 /// Represents a single JavaScript file that can be executed.
 ///
@@ -23,7 +23,7 @@ impl Script {
 	/// Initialize a script with the given JavaScript source code
 	///
 	/// Returns a new object on success, and an error in case of syntax or initialization error with the code.
-	pub fn from_string(js_code: &str) -> Result<Self, ErrBox> {
+	pub fn from_string(js_code: &str) -> Result<Self, AnyError> {
 		// console.log() is not available by default -- add the most basic version with single argument (and no warn/info/... variants)
 		let all_code = "const console = { log: function(expr) { Deno.core.print(expr + '\\n', false); } };".to_string() + js_code;
 
@@ -33,7 +33,7 @@ impl Script {
 	/// Initialize a script by loading it from a .js file
 	///
 	/// Returns a new object on success. Fails if the file cannot be opened or in case of syntax or initialization error with the code.
-	pub fn from_file(file: impl AsRef<Path>) -> Result<Self, ErrBox> {
+	pub fn from_file(file: impl AsRef<Path>) -> Result<Self, AnyError> {
 		let filename = file.as_ref().file_name().and_then(|s| s.to_str()).unwrap_or(Self::DEFAULT_FILENAME).to_owned();
 
 		match std::fs::read_to_string(file) {
@@ -41,7 +41,7 @@ impl Script {
 				Self::create_script(&js_code, &filename)
 			}
 			Err(e) => {
-				Err(ErrBox::from(e))
+				Err(AnyError::from(e))
 			}
 		}
 	}
@@ -50,7 +50,7 @@ impl Script {
 	///
 	/// Passes a single argument `args` to JS by serializing it to JSON (using serde_json).
 	/// Multiple arguments are currently not supported, but can easily be emulated using a `Vec` to work as a JSON array.
-	pub fn call<P, R>(&mut self, fn_name: &str, args: &P) -> Result<R, ErrBox>
+	pub fn call<P, R>(&mut self, fn_name: &str, args: &P) -> Result<R, AnyError>
 		where P: Serialize, R: DeserializeOwned
 	{
 		let json_args = serde_json::to_value(args)?;
@@ -60,7 +60,7 @@ impl Script {
 		Ok(result)
 	}
 
-	pub(crate) fn call_json(&mut self, fn_name: &str, args: &JsValue) -> Result<JsValue, ErrBox> {
+	pub(crate) fn call_json(&mut self, fn_name: &str, args: &JsValue) -> Result<JsValue, AnyError> {
 		// Note: ops() is required to initialize internal state
 		// Wrap everything in scoped block
 
@@ -87,8 +87,9 @@ impl Script {
 		Ok(result.take())
 	}
 
-	fn create_script(js_code: &str, js_filename: &str) -> Result<Self, ErrBox> {
+	fn create_script(js_code: &str, js_filename: &str) -> Result<Self, AnyError> {
 		let options = RuntimeOptions {
+			js_error_create_fn: None,
 			module_loader: None,
 			startup_snapshot: None,
 			will_snapshot: false,
@@ -107,7 +108,7 @@ impl Script {
 		state: &mut OpState,
 		args: JsValue,
 		_buf: &mut [ZeroCopyBuf],
-	) -> Result<JsValue, ErrBox> {
+	) -> Result<JsValue, AnyError> {
 		let resource_table = &mut state.resource_table;
 		let _rid = resource_table.add("result", Box::new(args));
 		//assert_eq!(rid, self.last_rid);

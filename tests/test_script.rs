@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use js_sandbox::{ErrBox, Script};
+use js_sandbox::{AnyError, Script};
 use util::expect_error;
 
 mod util;
@@ -64,7 +64,7 @@ fn call_string() {
 }
 
 #[test]
-fn call_minimal() -> Result<(), ErrBox> {
+fn call_minimal() -> Result<(), AnyError> {
 	let js_code = "function triple(a) { return 3 * a; }";
 	let mut script = Script::from_string(js_code)?;
 
@@ -76,7 +76,7 @@ fn call_minimal() -> Result<(), ErrBox> {
 }
 
 #[test]
-fn call_void() -> Result<(), ErrBox> {
+fn call_void() -> Result<(), AnyError> {
 	let js_code = "function print(expr) { console.log(expr); }";
 	let mut script = Script::from_string(js_code)?;
 
@@ -148,7 +148,7 @@ fn call_error_inexistent_function() {
 		.expect("Initialization succeeds");
 
 	let args = 7;
-	let result: Result<i32, ErrBox> = script.call("tripel", &args);
+	let result: Result<i32, AnyError> = script.call("tripel", &args);
 
 	expect_error(result, "Inexistent function");
 }
@@ -160,7 +160,7 @@ fn call_error_exception() {
 		.expect("Initialization succeeds");
 
 	let args = 7;
-	let result: Result<i32, ErrBox> = script.call("triple", &args);
+	let result: Result<i32, AnyError> = script.call("triple", &args);
 
 	expect_error(result, "Runtime exception");
 }

@@ -34,9 +34,9 @@
 //! A very basic application calls a JavaScript function `triple()` from Rust. It passes an argument and accepts a return value, both serialized via JSON:
 //!
 //! ```rust
-//! use js_sandbox::{Script, ErrBox};
+//! use js_sandbox::{Script, AnyError};
 //!
-//! fn main() -> Result<(), ErrBox> {
+//! fn main() -> Result<(), AnyError> {
 //! 	let js_code = "function triple(a) { return 3 * a; }";
 //! 	let mut script = Script::from_string(js_code)?;
 //!
@@ -51,7 +51,7 @@
 //! An example that serializes a JSON object (Rust -> JS) and formats a string (JS -> Rust):
 //!
 //! ```rust
-//! use js_sandbox::{Script, ErrBox};
+//! use js_sandbox::{Script, AnyError};
 //! use serde::Serialize;
 //!
 //! #[derive(Serialize, PartialEq)]
@@ -60,11 +60,11 @@
 //! 	age: u8,
 //! }
 //!
-//! fn main() -> Result<(), ErrBox> {
+//! fn main() -> Result<(), AnyError> {
 //! 	let src = r#"
-//!     function toString(person) {
-//!         return "A person named " + person.name + " of age " + person.age;
-//!     }"#;
+//! 	function toString(person) {
+//! 		return "A person named " + person.name + " of age " + person.age;
+//! 	}"#;
 //!
 //! 	let mut script = Script::from_string(src)
 //! 		.expect("Initialization succeeds");
@@ -83,9 +83,9 @@
 //! This example appends a string in two calls, and then gets the result in a third call:
 //!
 //! ```rust
-//! use js_sandbox::{Script, ErrBox};
+//! use js_sandbox::{Script, AnyError};
 //!
-//! fn main() -> Result<(), ErrBox> {
+//! fn main() -> Result<(), AnyError> {
 //! 	let src = r#"
 //! 	var total = '';
 //! 	function append(str) { total += str; }
@@ -107,10 +107,6 @@
 //! [serde_json]: https://docs.serde.rs/serde_json
 
 
-/// Polymorphic error type able to represent different error domains.
-///
-/// Currently reusing [the Deno equivalent](../deno_core/enum.ErrBox.html), this type may change slightly in the future depending on js-sandbox's needs.
-pub use deno_core::ErrBox;
 
 pub use script::Script;
 pub use util::eval_json;
@@ -119,6 +115,13 @@ pub use util::eval_json;
 ///
 /// Currently aliased as serde_json's Value type.
 pub type JsValue = serde_json::Value;
+
+/// Polymorphic error type able to represent different error domains.
+///
+/// Currently reusing [anyhow::Error](../anyhow/enum.Error.html), this type may change slightly in the future depending on js-sandbox's needs.
+// use through deno_core, to make sure same version of anyhow crate is used
+pub type AnyError = deno_core::error::AnyError;
+
 
 mod script;
 mod util;
