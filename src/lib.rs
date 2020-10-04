@@ -107,7 +107,6 @@
 //! [serde_json]: https://docs.serde.rs/serde_json
 
 
-
 pub use script::Script;
 pub use util::eval_json;
 
@@ -125,5 +124,3 @@ pub type AnyError = deno_core::error::AnyError;
 
 mod script;
 mod util;
-
-

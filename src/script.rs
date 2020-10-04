@@ -34,15 +34,16 @@ impl Script {
 	///
 	/// Returns a new object on success. Fails if the file cannot be opened or in case of syntax or initialization error with the code.
 	pub fn from_file(file: impl AsRef<Path>) -> Result<Self, AnyError> {
-		let filename = file.as_ref().file_name().and_then(|s| s.to_str()).unwrap_or(Self::DEFAULT_FILENAME).to_owned();
+		let filename = file
+			.as_ref()
+			.file_name()
+			.and_then(|s| s.to_str())
+			.unwrap_or(Self::DEFAULT_FILENAME)
+			.to_owned();
 
 		match std::fs::read_to_string(file) {
-			Ok(js_code) => {
-				Self::create_script(&js_code, &filename)
-			}
-			Err(e) => {
-				Err(AnyError::from(e))
-			}
+			Ok(js_code) => Self::create_script(&js_code, &filename),
+			Err(e) => Err(AnyError::from(e)),
 		}
 	}
 
@@ -51,7 +52,9 @@ impl Script {
 	/// Passes a single argument `args` to JS by serializing it to JSON (using serde_json).
 	/// Multiple arguments are currently not supported, but can easily be emulated using a `Vec` to work as a JSON array.
 	pub fn call<P, R>(&mut self, fn_name: &str, args: &P) -> Result<R, AnyError>
-		where P: Serialize, R: DeserializeOwned
+	where
+		P: Serialize,
+		R: DeserializeOwned,
 	{
 		let json_args = serde_json::to_value(args)?;
 		let json_result = self.call_json(fn_name, &json_args)?;
