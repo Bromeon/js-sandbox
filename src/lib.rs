@@ -62,9 +62,9 @@
 //!
 //! fn main() -> Result<(), AnyError> {
 //! 	let src = r#"
-//! 	function toString(person) {
-//! 		return "A person named " + person.name + " of age " + person.age;
-//! 	}"#;
+//! 		function toString(person) {
+//! 			return "A person named " + person.name + " of age " + person.age;
+//! 		}"#;
 //!
 //! 	let mut script = Script::from_string(src)
 //! 		.expect("Initialization succeeds");
@@ -87,9 +87,9 @@
 //!
 //! fn main() -> Result<(), AnyError> {
 //! 	let src = r#"
-//! 	var total = '';
-//! 	function append(str) { total += str; }
-//! 	function get()       { return total; }"#;
+//! 		var total = '';
+//! 		function append(str) { total += str; }
+//! 		function get()       { return total; }"#;
 //!
 //! 	let mut script = Script::from_string(src)
 //! 		.expect("Initialization succeeds");
