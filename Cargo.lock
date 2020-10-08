@@ -32,9 +32,9 @@ checksum = "4785bdd1c96b2a846b2bd7cc02e86b6b3dbf14e7e53446c4f54c92a361040822"
 
 [[package]]
 name = "deno_core"
-version = "0.61.0"
+version = "0.62.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "65e36015ffa5882ab3f388e1d3d6662790251b30bd298327bf9681bf0eda19eb"
+checksum = "083d1bcf73f30a433da90c7f8e0013e6809011b3a7871bd6f8af6dcd77dca343"
 dependencies = [
  "anyhow",
  "futures",
@@ -178,7 +178,7 @@ checksum = "dc6f3ad7b9d11a0c00842ff8de1b60ee58661048eb8049ed33c73594f359d7e6"
 
 [[package]]
 name = "js-sandbox"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "deno_core",
  "serde",
@@ -288,9 +288,9 @@ dependencies = [
 
 [[package]]
 name = "rusty_v8"
-version = "0.10.0"
+version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "20faaa8a28ea4b4ff35b9af88490313d5ce9aa6322a8a1779e66bd04415b4d1f"
+checksum = "8c11463988ec37b3f8cb84e4c2fe8f63058c46e07348b6d1d27b114a2b981304"
 dependencies = [
  "bitflags",
  "cargo_gn",
