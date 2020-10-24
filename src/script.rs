@@ -91,13 +91,7 @@ impl Script {
 	}
 
 	fn create_script(js_code: &str, js_filename: &str) -> Result<Self, AnyError> {
-		let options = RuntimeOptions {
-			js_error_create_fn: None,
-			module_loader: None,
-			startup_snapshot: None,
-			will_snapshot: false,
-			heap_limits: None,
-		};
+		let options = RuntimeOptions::default();
 
 		let mut runtime = JsRuntime::new(options);
 		runtime.execute(js_filename, &js_code)?;
