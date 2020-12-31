@@ -7,6 +7,8 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 
 use crate::{AnyError, JsValue};
+use std::rc::Rc;
+use std::borrow::Cow;
 
 /// Represents a single JavaScript file that can be executed.
 ///
@@ -84,10 +86,11 @@ impl Script {
 		let table = &mut state.resource_table;
 
 		// Get resource, and free slot (no longer needed)
-		let mut result: Box<JsValue> = table.remove(self.last_rid).unwrap();
+		let entry: Rc<ResultResource> = table.take(self.last_rid).expect("Resource entry must be present");
+		let extracted = Rc::try_unwrap(entry).expect("Rc must hold single strong ref to resource entry");
 		self.last_rid += 1;
 
-		Ok(result.take())
+		Ok(extracted.json_value)
 	}
 
 	fn create_script(js_code: &str, js_filename: &str) -> Result<Self, AnyError> {
@@ -100,16 +103,28 @@ impl Script {
 		Ok(Script { runtime, last_rid: 0 })
 	}
 
-
 	fn op_return(
 		state: &mut OpState,
 		args: JsValue,
 		_buf: &mut [ZeroCopyBuf],
 	) -> Result<JsValue, AnyError> {
+		let entry = ResultResource { json_value: args };
 		let resource_table = &mut state.resource_table;
-		let _rid = resource_table.add("result", Box::new(args));
+		let _rid = resource_table.add(entry);
 		//assert_eq!(rid, self.last_rid);
 
 		Ok(serde_json::Value::Null)
+	}
+}
+
+#[derive(Debug)]
+struct ResultResource {
+	json_value: JsValue
+}
+
+// Type that is stored inside Deno's resource table
+impl deno_core::Resource for ResultResource {
+	fn name(&self) -> Cow<str> {
+		"__rust_Result".into()
 	}
 }
