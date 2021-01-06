@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Jan Haller. zlib/libpng license.
+// Copyright (c) 2020-2021 Jan Haller. zlib/libpng license.
 
 use js_sandbox::JsValue;
 use util::expect_error;

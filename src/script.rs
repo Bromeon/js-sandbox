@@ -1,14 +1,14 @@
-// Copyright (c) 2020 Jan Haller. zlib/libpng license.
+// Copyright (c) 2020-2021 Jan Haller. zlib/libpng license.
 
+use std::borrow::Cow;
 use std::path::Path;
+use std::rc::Rc;
 
 use deno_core::{JsRuntime, OpState, RuntimeOptions, ZeroCopyBuf};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
 use crate::{AnyError, JsValue};
-use std::rc::Rc;
-use std::borrow::Cow;
 
 /// Represents a single JavaScript file that can be executed.
 ///

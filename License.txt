@@ -2,7 +2,7 @@
 js-sandbox
 ==========
 
-Copyright (c) 2020 Jan Haller
+Copyright (c) 2020-2021 Jan Haller
 zlib/libpng license
 
 

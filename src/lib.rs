@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Jan Haller. zlib/libpng license.
+// Copyright (c) 2020-2021 Jan Haller. zlib/libpng license.
 
 // Note: the crate documentation is copied to ReadMe.md using cargo-readme:  cargo readme --no-license > ReadMe.md
 // Alternatives:
