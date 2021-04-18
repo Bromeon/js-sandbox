@@ -76,7 +76,7 @@ impl Script {
 				__rust_result = null;
 
 			Deno.core.ops();
-			Deno.core.jsonOpSync(\"__rust_return\", __rust_result);\
+			Deno.core.opSync(\"__rust_return\", __rust_result);\
 		}}", f = fn_name, a = args);
 
 		self.runtime.execute(Self::DEFAULT_FILENAME, &js_code)?;
@@ -98,7 +98,7 @@ impl Script {
 
 		let mut runtime = JsRuntime::new(options);
 		runtime.execute(js_filename, &js_code)?;
-		runtime.register_op("__rust_return", deno_core::json_op_sync(Self::op_return));
+		runtime.register_op("__rust_return", deno_core::op_sync(Self::op_return));
 
 		Ok(Script { runtime, last_rid: 0 })
 	}
@@ -106,7 +106,7 @@ impl Script {
 	fn op_return(
 		state: &mut OpState,
 		args: JsValue,
-		_buf: &mut [ZeroCopyBuf],
+		_buf: Option<ZeroCopyBuf>,
 	) -> Result<JsValue, AnyError> {
 		let entry = ResultResource { json_value: args };
 		let resource_table = &mut state.resource_table;
