@@ -1,5 +1,7 @@
 // Copyright (c) 2020-2021 Jan Haller. zlib/libpng license.
 
+use std::time::Instant;
+
 use serde::{Deserialize, Serialize};
 
 use js_sandbox::{AnyError, Script};
@@ -107,7 +109,7 @@ fn call_local_state() {
 
 	let args = ();
 
- 	let result: i32 = script.call("inc", &args, None).unwrap();
+	let result: i32 = script.call("inc", &args, None).unwrap();
 	assert_eq!(result, 1);
 
 	let result: i32 = script.call("inc", &args, None).unwrap();
@@ -163,4 +165,22 @@ fn call_error_exception() {
 	let result: Result<i32, AnyError> = script.call("triple", &args, None);
 
 	expect_error(result, "Runtime exception");
+}
+
+#[test]
+fn call_error_timeout() {
+	let timeout = 200;
+	let expected_stop_time = 50;
+
+	let js_code = "function run_forever() { for(;;){} }";
+	let mut script = Script::from_string(js_code)
+		.expect("Initialization succeeds");
+
+	let start = Instant::now();
+	let result: Result<String, AnyError> = script.call("run_forever", &(), Some(timeout));
+	let duration = start.elapsed().as_millis() as u64;
+
+	expect_error(result, "Timed out");
+	assert!(duration >= timeout, "Terminates before the specified timeout (at {}ms)", duration);
+	assert!(duration < timeout + expected_stop_time, "Took longer than {}ms to terminate (stopped at {}ms)", expected_stop_time, duration);
 }
