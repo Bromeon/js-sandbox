@@ -1,9 +1,9 @@
 // Copyright (c) 2020-2021 Jan Haller. zlib/libpng license.
 
+use std::{thread, time::Duration};
 use std::borrow::Cow;
 use std::path::Path;
 use std::rc::Rc;
-use std::{thread, time::Duration};
 
 use deno_core::{JsRuntime, OpState, RuntimeOptions, ZeroCopyBuf};
 use serde::de::DeserializeOwned;
@@ -130,7 +130,7 @@ impl Script {
 
 #[derive(Debug)]
 struct ResultResource {
-	json_value: JsValue
+	json_value: JsValue,
 }
 
 // Type that is stored inside Deno's resource table

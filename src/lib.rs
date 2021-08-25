@@ -103,7 +103,7 @@
 //! }
 //! ```
 //!
-//! ### Call a script with timeout
+//! ## Call a script with timeout
 //!
 //! The JS code may contain long or forever running loops, that block Rust code. It is possible to set
 //! a timeout after which JS script execution is aborted.

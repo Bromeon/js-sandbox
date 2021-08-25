@@ -23,7 +23,7 @@ This library is in early development, with a basic but powerful API. The API may
 The _Hello World_ example -- print something using JavaScript -- is one line, as it should be:
 ```rust
 fn main() {
-	js_sandbox::eval_json("console.log('Hello Rust from JS')", None).expect("JS runs");
+	js_sandbox::eval_json("console.log('Hello Rust from JS')").expect("JS runs");
 }
 ```
 
@@ -101,7 +101,7 @@ fn main() -> Result<(), AnyError> {
 }
 ```
 
-### Call a script with timeout
+#### Call a script with timeout
 
 The JS code may contain long or forever running loops, that block Rust code. It is possible to set
 a timeout after which JS script execution is aborted.
@@ -110,12 +110,12 @@ a timeout after which JS script execution is aborted.
 use js_sandbox::{Script, AnyError};
 
 fn main() -> Result<(), AnyError> {
- 	let js_code = "function run_forever() { for(;;){} }";
- 	let mut script = Script::from_string(js_code)?;
+	let js_code = "function run_forever() { for(;;){} }";
+	let mut script = Script::from_string(js_code)?;
 
- 	let result: Result<String, AnyError> = script.call("run_forever", &(), Some(1000));
+	let result: Result<String, AnyError> = script.call("run_forever", &(), Some(1000));
 
- 	debug_assert_eq!(result.unwrap_err().to_string(), "Uncaught Error: execution terminated".to_string());
+	debug_assert_eq!(result.unwrap_err().to_string(), "Uncaught Error: execution terminated".to_string());
 
 	Ok(())
 }
