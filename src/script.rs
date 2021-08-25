@@ -54,20 +54,20 @@ impl Script {
 	///
 	/// Passes a single argument `args` to JS by serializing it to JSON (using serde_json).
 	/// Multiple arguments are currently not supported, but can easily be emulated using a `Vec` to work as a JSON array.
-	/// Optional value for `timeout` forces script to run no more than specified number of milliseconds
-	pub fn call<P, R>(&mut self, fn_name: &str, args: &P, timeout: Option<u64>) -> Result<R, AnyError>
+	/// Optional value for `timeout_ms` forces script to run no more than specified number of milliseconds
+	pub fn call<P, R>(&mut self, fn_name: &str, args: &P, timeout_ms: Option<u64>) -> Result<R, AnyError>
 	where
 		P: Serialize,
 		R: DeserializeOwned,
 	{
 		let json_args = serde_json::to_value(args)?;
-		let json_result = self.call_json(fn_name, &json_args, timeout)?;
+		let json_result = self.call_json(fn_name, &json_args, timeout_ms)?;
 		let result: R = serde_json::from_value(json_result)?;
 
 		Ok(result)
 	}
 
-	pub(crate) fn call_json(&mut self, fn_name: &str, args: &JsValue, timeout: Option<u64>) -> Result<JsValue, AnyError> {
+	pub(crate) fn call_json(&mut self, fn_name: &str, args: &JsValue, timeout_ms: Option<u64>) -> Result<JsValue, AnyError> {
 		// Note: ops() is required to initialize internal state
 		// Wrap everything in scoped block
 
@@ -81,7 +81,7 @@ impl Script {
 			Deno.core.opSync(\"__rust_return\", __rust_result);\
 		}}", f = fn_name, a = args);
 
-		if let Some(timeout_duration) = timeout {
+		if let Some(timeout_duration) = timeout_ms {
 			let handle = self.runtime.v8_isolate().thread_safe_handle();
 
 			thread::spawn(move || {

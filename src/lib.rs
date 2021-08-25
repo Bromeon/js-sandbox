@@ -25,7 +25,7 @@
 //! The _Hello World_ example -- print something using JavaScript -- is one line, as it should be:
 //! ```rust
 //! fn main() {
-//! 	js_sandbox::eval_json("console.log('Hello Rust from JS')", None).expect("JS runs");
+//! 	js_sandbox::eval_json("console.log('Hello Rust from JS')").expect("JS runs");
 //! }
 //! ```
 //!
