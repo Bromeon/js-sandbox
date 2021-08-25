@@ -23,7 +23,7 @@ This library is in early development, with a basic but powerful API. The API may
 The _Hello World_ example -- print something using JavaScript -- is one line, as it should be:
 ```rust
 fn main() {
-	js_sandbox::eval_json("console.log('Hello Rust from JS')").expect("JS runs");
+	js_sandbox::eval_json("console.log('Hello Rust from JS')", None).expect("JS runs");
 }
 ```
 
@@ -39,7 +39,7 @@ fn main() -> Result<(), AnyError> {
 	let mut script = Script::from_string(js_code)?;
 
 	let arg = 7;
-	let result: i32 = script.call("triple", &arg)?;
+	let result: i32 = script.call("triple", &arg, None)?;
 
 	assert_eq!(result, 21);
 	Ok(())
@@ -68,7 +68,7 @@ fn main() -> Result<(), AnyError> {
 		.expect("Initialization succeeds");
 
 	let person = Person { name: "Roger".to_string(), age: 42 };
-	let result: String = script.call("toString", &person).unwrap();
+	let result: String = script.call("toString", &person, None).unwrap();
 
 	assert_eq!(result, "A person named Roger of age 42");
 	Ok(())
@@ -92,11 +92,31 @@ fn main() -> Result<(), AnyError> {
 	let mut script = Script::from_string(src)
 		.expect("Initialization succeeds");
 
-	let _: () = script.call("append", &"hello").unwrap();
-	let _: () = script.call("append", &" world").unwrap();
-	let result: String = script.call("get", &()).unwrap();
+	let _: () = script.call("append", &"hello", None).unwrap();
+	let _: () = script.call("append", &" world", None).unwrap();
+	let result: String = script.call("get", &(), None).unwrap();
 
 	assert_eq!(result, "hello world");
+	Ok(())
+}
+```
+
+### Call a script with timeout
+
+The JS code may contain long or forever running loops, that block Rust code. It is possible to set
+a timeout after which JS script execution is aborted.
+
+```rust
+use js_sandbox::{Script, AnyError};
+
+fn main() -> Result<(), AnyError> {
+ 	let js_code = "function run_forever() { for(;;){} }";
+ 	let mut script = Script::from_string(js_code)?;
+
+ 	let result: Result<String, AnyError> = script.call("run_forever", &(), Some(1000));
+
+ 	debug_assert_eq!(result.unwrap_err().to_string(), "Uncaught Error: execution terminated".to_string());
+
 	Ok(())
 }
 ```

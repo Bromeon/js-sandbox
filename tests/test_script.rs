@@ -43,7 +43,7 @@ fn call() {
 	let args = JsArgs { text: "hi".to_string(), num: 4 };
 	let exp_result = JsResult { new_text: "hi.".to_string(), new_num: 12 };
 
-	let result: JsResult = script.call("extract", &args).unwrap();
+	let result: JsResult = script.call("extract", &args, None).unwrap();
 	assert_eq!(result, exp_result);
 }
 
@@ -58,7 +58,7 @@ fn call_string() {
 		.expect("Initialization succeeds");
 
 	let person = Person { name: "Roger".to_string(), age: 42 };
-	let result: String = script.call("toString", &person).unwrap();
+	let result: String = script.call("toString", &person, None).unwrap();
 
 	assert_eq!(result, "A person named Roger with age 42");
 }
@@ -69,7 +69,7 @@ fn call_minimal() -> Result<(), AnyError> {
 	let mut script = Script::from_string(js_code)?;
 
 	let args = 7;
-	let result: i32 = script.call("triple", &args)?;
+	let result: i32 = script.call("triple", &args, None)?;
 
 	assert_eq!(result, 21);
 	Ok(())
@@ -81,7 +81,7 @@ fn call_void() -> Result<(), AnyError> {
 	let mut script = Script::from_string(js_code)?;
 
 	let args = "some text";
-	let _result: () = script.call("print", &args)?;
+	let _result: () = script.call("print", &args, None)?;
 
 	Ok(())
 }
@@ -94,7 +94,7 @@ fn call_from_file() {
 	let args = JsArgs { text: "hi".to_string(), num: 4 };
 	let exp_result = JsResult { new_text: "hi.".to_string(), new_num: 12 };
 
-	let result: JsResult = script.call("extract", &args).unwrap();
+	let result: JsResult = script.call("extract", &args, None).unwrap();
 	assert_eq!(result, exp_result);
 }
 
@@ -107,10 +107,10 @@ fn call_local_state() {
 
 	let args = ();
 
-	let result: i32 = script.call("inc", &args).unwrap();
+ 	let result: i32 = script.call("inc", &args, None).unwrap();
 	assert_eq!(result, 1);
 
-	let result: i32 = script.call("inc", &args).unwrap();
+	let result: i32 = script.call("inc", &args, None).unwrap();
 	assert_eq!(result, 2);
 }
 
@@ -125,8 +125,8 @@ fn call_repeated() {
 
 	let args = 7;
 
-	let result_triple: i32 = script.call("triple", &args).unwrap();
-	let result_square: i32 = script.call("square", &args).unwrap();
+	let result_triple: i32 = script.call("triple", &args, None).unwrap();
+	let result_square: i32 = script.call("square", &args, None).unwrap();
 
 	assert_eq!(result_triple, 21);
 	assert_eq!(result_square, 49);
@@ -148,7 +148,7 @@ fn call_error_inexistent_function() {
 		.expect("Initialization succeeds");
 
 	let args = 7;
-	let result: Result<i32, AnyError> = script.call("tripel", &args);
+	let result: Result<i32, AnyError> = script.call("tripel", &args, None);
 
 	expect_error(result, "Inexistent function");
 }
@@ -160,7 +160,7 @@ fn call_error_exception() {
 		.expect("Initialization succeeds");
 
 	let args = 7;
-	let result: Result<i32, AnyError> = script.call("triple", &args);
+	let result: Result<i32, AnyError> = script.call("triple", &args, None);
 
 	expect_error(result, "Runtime exception");
 }
