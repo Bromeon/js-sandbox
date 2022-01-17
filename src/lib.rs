@@ -126,7 +126,6 @@
 //! [Deno]: https://deno.land/
 //! [serde_json]: https://docs.serde.rs/serde_json
 
-
 pub use script::Script;
 pub use util::eval_json;
 
@@ -140,7 +139,6 @@ pub type JsValue = serde_json::Value;
 /// Currently reusing [anyhow::Error](../anyhow/enum.Error.html), this type may change slightly in the future depending on js-sandbox's needs.
 // use through deno_core, to make sure same version of anyhow crate is used
 pub type AnyError = deno_core::error::AnyError;
-
 
 mod script;
 mod util;

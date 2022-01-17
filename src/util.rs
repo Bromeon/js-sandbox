@@ -8,12 +8,15 @@ use crate::{AnyError, JsValue, Script};
 /// This function is primarily useful for small standalone experiments. Usually, you would want to use the [`Script`](struct.Script.html) struct
 /// for more sophisticated Rust->JS interaction.
 pub fn eval_json(js_expr: &str) -> Result<JsValue, AnyError> {
-	let code = format!("
+    let code = format!(
+        "
 		function __rust_expr() {{
 			return ({expr});
 		}}
-	", expr = js_expr);
+	",
+        expr = js_expr
+    );
 
-	let mut script = Script::from_string(&code)?;
-	script.call_json("__rust_expr", &JsValue::Null, None)
+    let mut script = Script::from_string(&code)?;
+    script.call_json("__rust_expr", &JsValue::Null, None)
 }
