@@ -7,7 +7,7 @@ description = "Execute JavaScript code from Rust in a secure sandbox, and transp
 repository = "https://github.com/Bromeon/js-sandbox"
 authors = ["Jan Haller <bromeon@gmail.com>"]
 license = "Zlib"
-edition = "2018"
+edition = "2021"
 readme = "ReadMe.md"
 
 [dependencies]
