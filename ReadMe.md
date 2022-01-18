@@ -75,6 +75,30 @@ fn main() -> Result<(), AnyError> {
 }
 ```
 
+
+### Include external JavaScript file as a string
+
+You can include a UTF-8 encoded file to the binary by using
+[std::include_str](https://doc.rust-lang.org/std/macro.include_str.html) macro
+
+```js
+function say_hello(caller) {
+	return `Hello ${caller} from JS`;
+}
+```
+
+```rust
+use js_sandbox::Script;
+
+fn main() {
+	let my_js = include_str!("my.js");
+	let mut script = Script::from_string(my_js).expect("Initialization succeeds");
+	let from_js: String = script.call("say_hello", &"Rust").unwrap();
+
+	println!("js: {}", from_js);
+}
+```
+
 ### Maintain state in JavaScript
 
 It is possible to initialize a stateful JS script, and then use functions to modify that state over time.
