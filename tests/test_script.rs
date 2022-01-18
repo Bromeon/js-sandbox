@@ -39,11 +39,16 @@ fn call() {
 		};
 	}"#;
 
-	let mut script = Script::from_string(src)
-		.expect("Initialization succeeds");
+	let mut script = Script::from_string(src).expect("Initialization succeeds");
 
-	let args = JsArgs { text: "hi".to_string(), num: 4 };
-	let exp_result = JsResult { new_text: "hi.".to_string(), new_num: 12 };
+	let args = JsArgs {
+		text: "hi".to_string(),
+		num: 4,
+	};
+	let exp_result = JsResult {
+		new_text: "hi.".to_string(),
+		new_num: 12,
+	};
 
 	let result: JsResult = script.call("extract", &args, None).unwrap();
 	assert_eq!(result, exp_result);
@@ -56,10 +61,12 @@ fn call_string() {
 		return "A person named " + person.name + " with age " + person.age;
 	}"#;
 
-	let mut script = Script::from_string(src)
-		.expect("Initialization succeeds");
+	let mut script = Script::from_string(src).expect("Initialization succeeds");
 
-	let person = Person { name: "Roger".to_string(), age: 42 };
+	let person = Person {
+		name: "Roger".to_string(),
+		age: 42,
+	};
 	let result: String = script.call("toString", &person, None).unwrap();
 
 	assert_eq!(result, "A person named Roger with age 42");
@@ -90,11 +97,16 @@ fn call_void() -> Result<(), AnyError> {
 
 #[test]
 fn call_from_file() {
-	let mut script = Script::from_file("tests/hello.js")
-		.expect("File can be loaded");
+	let mut script = Script::from_file("tests/hello.js").expect("File can be loaded");
 
-	let args = JsArgs { text: "hi".to_string(), num: 4 };
-	let exp_result = JsResult { new_text: "hi.".to_string(), new_num: 12 };
+	let args = JsArgs {
+		text: "hi".to_string(),
+		num: 4,
+	};
+	let exp_result = JsResult {
+		new_text: "hi.".to_string(),
+		new_num: 12,
+	};
 
 	let result: JsResult = script.call("extract", &args, None).unwrap();
 	assert_eq!(result, exp_result);
@@ -104,8 +116,7 @@ fn call_from_file() {
 fn call_local_state() {
 	let src = "var i = 0;
 	function inc() { return ++i; }";
-	let mut script = Script::from_string(src)
-		.expect("Initialization succeeds");
+	let mut script = Script::from_string(src).expect("Initialization succeeds");
 
 	let args = ();
 
@@ -122,8 +133,7 @@ fn call_repeated() {
 		function triple(a) { return 3 * a; }
 		function square(a) { return a * a; }";
 
-	let mut script = Script::from_string(src)
-		.expect("Initialization succeeds");
+	let mut script = Script::from_string(src).expect("Initialization succeeds");
 
 	let args = 7;
 
@@ -146,8 +156,7 @@ fn ctor_error_syntax() {
 fn call_error_inexistent_function() {
 	// TODO call bad
 	let src = "function triple(a) { return 3 * a; }";
-	let mut script = Script::from_string(src)
-		.expect("Initialization succeeds");
+	let mut script = Script::from_string(src).expect("Initialization succeeds");
 
 	let args = 7;
 	let result: Result<i32, AnyError> = script.call("tripel", &args, None);
@@ -158,8 +167,7 @@ fn call_error_inexistent_function() {
 #[test]
 fn call_error_exception() {
 	let src = "function triple(a) { throw \"string_error\"; }";
-	let mut script = Script::from_string(src)
-		.expect("Initialization succeeds");
+	let mut script = Script::from_string(src).expect("Initialization succeeds");
 
 	let args = 7;
 	let result: Result<i32, AnyError> = script.call("triple", &args, None);
@@ -173,14 +181,22 @@ fn call_error_timeout() {
 	let expected_stop_time = 50;
 
 	let js_code = "function run_forever() { for(;;){} }";
-	let mut script = Script::from_string(js_code)
-		.expect("Initialization succeeds");
+	let mut script = Script::from_string(js_code).expect("Initialization succeeds");
 
 	let start = Instant::now();
 	let result: Result<String, AnyError> = script.call("run_forever", &(), Some(timeout));
 	let duration = start.elapsed().as_millis() as u64;
 
 	expect_error(result, "Timed out");
-	assert!(duration >= timeout, "Terminates before the specified timeout (at {}ms)", duration);
-	assert!(duration < timeout + expected_stop_time, "Took longer than {}ms to terminate (stopped at {}ms)", expected_stop_time, duration);
+	assert!(
+		duration >= timeout,
+		"Terminates before the specified timeout (at {}ms)",
+		duration
+	);
+	assert!(
+		duration < timeout + expected_stop_time,
+		"Took longer than {}ms to terminate (stopped at {}ms)",
+		expected_stop_time,
+		duration
+	);
 }

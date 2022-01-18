@@ -15,8 +15,8 @@ fn console_log() {
 
 #[test]
 fn expression() {
-	let result: JsValue = js_sandbox::eval_json("({a: 43, b: 12}).b - 2")
-		.expect("Valid expression can be evaluated");
+	let result: JsValue =
+		js_sandbox::eval_json("({a: 43, b: 12}).b - 2").expect("Valid expression can be evaluated");
 
 	let exp_result = JsValue::from(10);
 

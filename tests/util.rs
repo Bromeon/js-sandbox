@@ -10,7 +10,8 @@ pub fn expect_error<T>(result: Result<T, AnyError>, error_type: &str) {
 		Err(e) => e,
 	};
 
-	let err = err.downcast_ref::<JsError>()
+	let err = err
+		.downcast_ref::<JsError>()
 		.expect(&format!("{} must lead to JsError type", error_type));
 
 	println!("Expected error occurred:\n{}", err.message);
