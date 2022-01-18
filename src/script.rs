@@ -16,12 +16,12 @@ use crate::{AnyError, JsValue};
 /// The code can be loaded from a file or from a string in memory.
 /// A typical usage pattern is to load a file with one or more JS function definitions, and then call those functions from Rust.
 pub struct Script {
-	runtime: JsRuntime,
-	last_rid: u32,
+    runtime: JsRuntime,
+    last_rid: u32,
 }
 
 impl Script {
-	const DEFAULT_FILENAME: &'static str = "sandboxed.js";
+    const DEFAULT_FILENAME: &'static str = "sandboxed.js";
 
 	/// Initialize a script with the given JavaScript source code
 	///
@@ -33,25 +33,25 @@ impl Script {
 				.to_string()
 				+ js_code;
 
-		Self::create_script(&all_code, Self::DEFAULT_FILENAME)
-	}
+        Self::create_script(&all_code, Self::DEFAULT_FILENAME)
+    }
 
-	/// Initialize a script by loading it from a .js file
-	///
-	/// Returns a new object on success. Fails if the file cannot be opened or in case of syntax or initialization error with the code.
-	pub fn from_file(file: impl AsRef<Path>) -> Result<Self, AnyError> {
-		let filename = file
-			.as_ref()
-			.file_name()
-			.and_then(|s| s.to_str())
-			.unwrap_or(Self::DEFAULT_FILENAME)
-			.to_owned();
+    /// Initialize a script by loading it from a .js file
+    ///
+    /// Returns a new object on success. Fails if the file cannot be opened or in case of syntax or initialization error with the code.
+    pub fn from_file(file: impl AsRef<Path>) -> Result<Self, AnyError> {
+        let filename = file
+            .as_ref()
+            .file_name()
+            .and_then(|s| s.to_str())
+            .unwrap_or(Self::DEFAULT_FILENAME)
+            .to_owned();
 
-		match std::fs::read_to_string(file) {
-			Ok(js_code) => Self::create_script(&js_code, &filename),
-			Err(e) => Err(AnyError::from(e)),
-		}
-	}
+        match std::fs::read_to_string(file) {
+            Ok(js_code) => Self::create_script(&js_code, &filename),
+            Err(e) => Err(AnyError::from(e)),
+        }
+    }
 
 	/// Invokes a JavaScript function.
 	///
@@ -72,8 +72,8 @@ impl Script {
 		let json_result = self.call_json(fn_name, &json_args, timeout_ms)?;
 		let result: R = serde_json::from_value(json_result)?;
 
-		Ok(result)
-	}
+        Ok(result)
+    }
 
 	pub(crate) fn call_json(
 		&mut self,
@@ -98,20 +98,20 @@ impl Script {
 			a = args
 		);
 
-		if let Some(timeout_duration) = timeout_ms {
-			let handle = self.runtime.v8_isolate().thread_safe_handle();
+        if let Some(timeout_duration) = timeout_ms {
+            let handle = self.runtime.v8_isolate().thread_safe_handle();
 
-			thread::spawn(move || {
-				thread::sleep(Duration::from_millis(timeout_duration));
-				handle.terminate_execution();
-			});
-		}
+            thread::spawn(move || {
+                thread::sleep(Duration::from_millis(timeout_duration));
+                handle.terminate_execution();
+            });
+        }
 
-		self.runtime.execute(Self::DEFAULT_FILENAME, &js_code)?;
+        // syncing ops is required cause they sometimes change while preparing the engine
+        self.runtime.sync_ops_cache();
 
-		let state_rc = self.runtime.op_state();
-		let mut state = state_rc.borrow_mut();
-		let table = &mut state.resource_table;
+        self.runtime
+            .execute_script(Self::DEFAULT_FILENAME, &js_code)?;
 
 		// Get resource, and free slot (no longer needed)
 		let entry: Rc<ResultResource> = table
@@ -121,15 +121,19 @@ impl Script {
 			Rc::try_unwrap(entry).expect("Rc must hold single strong ref to resource entry");
 		self.last_rid += 1;
 
-		Ok(extracted.json_value)
-	}
+        // Get resource, and free slot (no longer needed)
+        let entry: Rc<ResultResource> = table
+            .take(self.last_rid)
+            .expect("Resource entry must be present");
+        let extracted =
+            Rc::try_unwrap(entry).expect("Rc must hold single strong ref to resource entry");
+        self.last_rid += 1;
 
-	fn create_script(js_code: &str, js_filename: &str) -> Result<Self, AnyError> {
-		let options = RuntimeOptions::default();
+        Ok(extracted.json_value)
+    }
 
-		let mut runtime = JsRuntime::new(options);
-		runtime.execute(js_filename, &js_code)?;
-		runtime.register_op("__rust_return", deno_core::op_sync(Self::op_return));
+    fn create_script(js_code: &str, js_filename: &str) -> Result<Self, AnyError> {
+        let options = RuntimeOptions::default();
 
 		Ok(Script {
 			runtime,
@@ -137,23 +141,31 @@ impl Script {
 		})
 	}
 
-	fn op_return(
-		state: &mut OpState,
-		args: JsValue,
-		_buf: Option<ZeroCopyBuf>,
-	) -> Result<JsValue, AnyError> {
-		let entry = ResultResource { json_value: args };
-		let resource_table = &mut state.resource_table;
-		let _rid = resource_table.add(entry);
-		//assert_eq!(rid, self.last_rid);
+        runtime.execute_script(js_filename, &js_code)?;
 
-		Ok(serde_json::Value::Null)
-	}
+        Ok(Script {
+            runtime,
+            last_rid: 0,
+        })
+    }
+
+    fn op_return(
+        state: &mut OpState,
+        args: JsValue,
+        _buf: Option<ZeroCopyBuf>,
+    ) -> Result<JsValue, AnyError> {
+        let entry = ResultResource { json_value: args };
+        let resource_table = &mut state.resource_table;
+        let _rid = resource_table.add(entry);
+        //assert_eq!(rid, self.last_rid);
+
+        Ok(serde_json::Value::Null)
+    }
 }
 
 #[derive(Debug)]
 struct ResultResource {
-	json_value: JsValue,
+    json_value: JsValue,
 }
 
 // Type that is stored inside Deno's resource table

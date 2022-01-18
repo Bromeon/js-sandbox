@@ -17,6 +17,6 @@ pub fn eval_json(js_expr: &str) -> Result<JsValue, AnyError> {
 		expr = js_expr
 	);
 
-	let mut script = Script::from_string(&code)?;
-	script.call_json("__rust_expr", &JsValue::Null, None)
+    let mut script = Script::from_string(&code)?;
+    script.call_json("__rust_expr", &JsValue::Null, None)
 }
