@@ -1,9 +1,9 @@
 // Copyright (c) 2020-2021 Jan Haller. zlib/libpng license.
 
-use std::{thread, time::Duration};
 use std::borrow::Cow;
 use std::path::Path;
 use std::rc::Rc;
+use std::{thread, time::Duration};
 
 use deno_core::{JsRuntime, OpState, RuntimeOptions, ZeroCopyBuf};
 use serde::de::DeserializeOwned;
@@ -28,7 +28,10 @@ impl Script {
 	/// Returns a new object on success, and an error in case of syntax or initialization error with the code.
 	pub fn from_string(js_code: &str) -> Result<Self, AnyError> {
 		// console.log() is not available by default -- add the most basic version with single argument (and no warn/info/... variants)
-		let all_code = "const console = { log: function(expr) { Deno.core.print(expr + '\\n', false); } };".to_string() + js_code;
+		let all_code =
+			"const console = { log: function(expr) { Deno.core.print(expr + '\\n', false); } };"
+				.to_string()
+				+ js_code;
 
 		Self::create_script(&all_code, Self::DEFAULT_FILENAME)
 	}
@@ -55,7 +58,12 @@ impl Script {
 	/// Passes a single argument `args` to JS by serializing it to JSON (using serde_json).
 	/// Multiple arguments are currently not supported, but can easily be emulated using a `Vec` to work as a JSON array.
 	/// Optional value for `timeout_ms` forces script to run no more than specified number of milliseconds
-	pub fn call<P, R>(&mut self, fn_name: &str, args: &P, timeout_ms: Option<u64>) -> Result<R, AnyError>
+	pub fn call<P, R>(
+		&mut self,
+		fn_name: &str,
+		args: &P,
+		timeout_ms: Option<u64>,
+	) -> Result<R, AnyError>
 	where
 		P: Serialize,
 		R: DeserializeOwned,
@@ -67,19 +75,28 @@ impl Script {
 		Ok(result)
 	}
 
-	pub(crate) fn call_json(&mut self, fn_name: &str, args: &JsValue, timeout_ms: Option<u64>) -> Result<JsValue, AnyError> {
+	pub(crate) fn call_json(
+		&mut self,
+		fn_name: &str,
+		args: &JsValue,
+		timeout_ms: Option<u64>,
+	) -> Result<JsValue, AnyError> {
 		// Note: ops() is required to initialize internal state
 		// Wrap everything in scoped block
 
 		// undefined will cause JSON serialization error, so it needs to be treated as null
-		let js_code = format!("{{
+		let js_code = format!(
+			"{{
 			let __rust_result = {f}({a});
 			if (typeof __rust_result === 'undefined')
 				__rust_result = null;
 
 			Deno.core.ops();
 			Deno.core.opSync(\"__rust_return\", __rust_result);\
-		}}", f = fn_name, a = args);
+		}}",
+			f = fn_name,
+			a = args
+		);
 
 		if let Some(timeout_duration) = timeout_ms {
 			let handle = self.runtime.v8_isolate().thread_safe_handle();
@@ -97,8 +114,11 @@ impl Script {
 		let table = &mut state.resource_table;
 
 		// Get resource, and free slot (no longer needed)
-		let entry: Rc<ResultResource> = table.take(self.last_rid).expect("Resource entry must be present");
-		let extracted = Rc::try_unwrap(entry).expect("Rc must hold single strong ref to resource entry");
+		let entry: Rc<ResultResource> = table
+			.take(self.last_rid)
+			.expect("Resource entry must be present");
+		let extracted =
+			Rc::try_unwrap(entry).expect("Rc must hold single strong ref to resource entry");
 		self.last_rid += 1;
 
 		Ok(extracted.json_value)
@@ -111,7 +131,10 @@ impl Script {
 		runtime.execute(js_filename, &js_code)?;
 		runtime.register_op("__rust_return", deno_core::op_sync(Self::op_return));
 
-		Ok(Script { runtime, last_rid: 0 })
+		Ok(Script {
+			runtime,
+			last_rid: 0,
+		})
 	}
 
 	fn op_return(
