@@ -38,6 +38,8 @@ impl Script {
 	/// Initialize a script by loading it from a .js file
 	///
 	/// Returns a new object on success. Fails if the file cannot be opened or in case of syntax or initialization error with the code.
+	///
+	/// At the moment, a script is limited to a single file, and you will need to do bundling yourself.
 	pub fn from_file(file: impl AsRef<Path>) -> Result<Self, AnyError> {
 		let filename = file
 			.as_ref()

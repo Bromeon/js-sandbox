@@ -1,11 +1,13 @@
+<!-- DO NOT EDIT -- ReadMe is generated from lib.rs -->
+
 # js-sandbox
 
 [<img alt="crates.io" src="https://img.shields.io/crates/v/js-sandbox?logo=rust&color=A6854D" />](https://crates.io/crates/js-sandbox)
 [<img alt="docs.rs" src="https://img.shields.io/badge/docs.rs-js--sandbox-4D8AA6?&logo=data:image/svg+xml;base64,PHN2ZyByb2xlPSJpbWciIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgdmlld0JveD0iMCAwIDUxMiA1MTIiPjxwYXRoIGZpbGw9IiNmNWY1ZjUiIGQ9Ik00ODguNiAyNTAuMkwzOTIgMjE0VjEwNS41YzAtMTUtOS4zLTI4LjQtMjMuNC0zMy43bC0xMDAtMzcuNWMtOC4xLTMuMS0xNy4xLTMuMS0yNS4zIDBsLTEwMCAzNy41Yy0xNC4xIDUuMy0yMy40IDE4LjctMjMuNCAzMy43VjIxNGwtOTYuNiAzNi4yQzkuMyAyNTUuNSAwIDI2OC45IDAgMjgzLjlWMzk0YzAgMTMuNiA3LjcgMjYuMSAxOS45IDMyLjJsMTAwIDUwYzEwLjEgNS4xIDIyLjEgNS4xIDMyLjIgMGwxMDMuOS01MiAxMDMuOSA1MmMxMC4xIDUuMSAyMi4xIDUuMSAzMi4yIDBsMTAwLTUwYzEyLjItNi4xIDE5LjktMTguNiAxOS45LTMyLjJWMjgzLjljMC0xNS05LjMtMjguNC0yMy40LTMzLjd6TTM1OCAyMTQuOGwtODUgMzEuOXYtNjguMmw4NS0zN3Y3My4zek0xNTQgMTA0LjFsMTAyLTM4LjIgMTAyIDM4LjJ2LjZsLTEwMiA0MS40LTEwMi00MS40di0uNnptODQgMjkxLjFsLTg1IDQyLjV2LTc5LjFsODUtMzguOHY3NS40em0wLTExMmwtMTAyIDQxLjQtMTAyLTQxLjR2LS42bDEwMi0zOC4yIDEwMiAzOC4ydi42em0yNDAgMTEybC04NSA0Mi41di03OS4xbDg1LTM4Ljh2NzUuNHptMC0xMTJsLTEwMiA0MS40LTEwMi00MS40di0uNmwxMDItMzguMiAxMDIgMzguMnYuNnoiPjwvcGF0aD48L3N2Zz4K" />](https://docs.rs/js-sandbox)
 
-`js-sandbox` is a Rust library for executing JavaScript code from Rust in a secure sandbox. It is based on the [Deno] project and uses [serde_json]
+`js-sandbox` is a Rust library for executing JavaScript code from Rust in a secure sandbox. It is based on the [Deno] project and
+uses [serde_json]
 for serialization.
-
 
 This library's primary focus is **embedding JS as a scripting language into Rust**. It does not provide all possible integrations between the two
 languages, and is not tailored to JS's biggest domain as a client/server side language of the web.
@@ -75,27 +77,23 @@ fn main() -> Result<(), AnyError> {
 }
 ```
 
+### Load JS file
 
-### Include external JavaScript file as a string
+JavaScript files can be loaded from any `Path` at runtime (e.g. 3rd party mods).
 
-You can include a UTF-8 encoded file to the binary by using
-[std::include_str](https://doc.rust-lang.org/std/macro.include_str.html) macro
-
-```js
-function say_hello(caller) {
-	return `Hello ${caller} from JS`;
-}
-```
+If you want to statically embed UTF-8 encoded files in the Rust binary, you can alternatively use the
+[`std::include_str`](https://doc.rust-lang.org/std/macro.include_str.html) macro.
 
 ```rust
 use js_sandbox::Script;
 
 fn main() {
-	let my_js = include_str!("my.js");
-	let mut script = Script::from_string(my_js).expect("Initialization succeeds");
-	let from_js: String = script.call("say_hello", &"Rust").unwrap();
+	let mut script = Script::from_file("script.js").expect("Load + init succeeds");
+	// or, at compile time:
+	let code: &'static str = include_str!("script.js");
+	let mut script = Script::from_string(code).expect("Init succeeds");
 
-	println!("js: {}", from_js);
+	// use script as usual
 }
 ```
 
@@ -125,7 +123,7 @@ fn main() -> Result<(), AnyError> {
 }
 ```
 
-#### Call a script with timeout
+### Call a script with timeout
 
 The JS code may contain long or forever running loops, that block Rust code. It is possible to set
 a timeout after which JS script execution is aborted.

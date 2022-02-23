@@ -77,6 +77,27 @@
 //! }
 //! ```
 //!
+//! ## Load JS file
+//!
+//! JavaScript files can be loaded from any `Path` at runtime (e.g. 3rd party mods).
+//!
+//! If you want to statically embed UTF-8 encoded files in the Rust binary, you can alternatively use the
+//! [`std::include_str`](https://doc.rust-lang.org/std/macro.include_str.html) macro.
+//!
+//! ```no_run
+//! # macro_rules! include_str { ($s:expr) => { "" } } // very trick
+//! use js_sandbox::Script;
+//!
+//! fn main() {
+//! 	let mut script = Script::from_file("script.js").expect("Load + init succeeds");
+//!    	// or, at compile time:
+//! 	let code: &'static str = include_str!("script.js");
+//! 	let mut script = Script::from_string(code).expect("Init succeeds");
+//!
+//! 	// use script as usual
+//! }
+//! ```
+//!
 //! ## Maintain state in JavaScript
 //!
 //! It is possible to initialize a stateful JS script, and then use functions to modify that state over time.
