@@ -8,7 +8,6 @@
 //! `js-sandbox` is a Rust library for executing JavaScript code from Rust in a secure sandbox. It is based on the [Deno] project and uses [serde_json]
 //! for serialization.
 //!
-//!
 //! This library's primary focus is **embedding JS as a scripting language into Rust**. It does not provide all possible integrations between the two
 //! languages, and is not tailored to JS's biggest domain as a client/server side language of the web.
 //!
@@ -41,7 +40,7 @@
 //! 	let mut script = Script::from_string(js_code)?;
 //!
 //! 	let arg = 7;
-//! 	let result: i32 = script.call("triple", &arg, None)?;
+//! 	let result: i32 = script.call("triple", &arg)?;
 //!
 //! 	assert_eq!(result, 21);
 //! 	Ok(())
@@ -70,7 +69,7 @@
 //! 		.expect("Initialization succeeds");
 //!
 //! 	let person = Person { name: "Roger".to_string(), age: 42 };
-//! 	let result: String = script.call("toString", &person, None).unwrap();
+//! 	let result: String = script.call("toString", &person).unwrap();
 //!
 //! 	assert_eq!(result, "A person named Roger of age 42");
 //! 	Ok(())
@@ -90,7 +89,7 @@
 //!
 //! fn main() {
 //! 	let mut script = Script::from_file("script.js").expect("Load + init succeeds");
-//!    	// or, at compile time:
+//! 	// or, at compile time:
 //! 	let code: &'static str = include_str!("script.js");
 //! 	let mut script = Script::from_string(code).expect("Init succeeds");
 //!
@@ -112,12 +111,11 @@
 //! 		function append(str) { total += str; }
 //! 		function get()       { return total; }"#;
 //!
-//! 	let mut script = Script::from_string(src)
-//! 		.expect("Initialization succeeds");
+//! 	let mut script = Script::from_string(src)?;
 //!
-//! 	let _: () = script.call("append", &"hello", None).unwrap();
-//! 	let _: () = script.call("append", &" world", None).unwrap();
-//! 	let result: String = script.call("get", &(), None).unwrap();
+//! 	let _: () = script.call("append", &"hello")?;
+//! 	let _: () = script.call("append", &" world")?;
+//! 	let result: String = script.call("get", &())?;
 //!
 //! 	assert_eq!(result, "hello world");
 //! 	Ok(())
@@ -133,12 +131,17 @@
 //! use js_sandbox::{Script, AnyError};
 //!
 //! fn main() -> Result<(), AnyError> {
+//! 	use std::time::Duration;
 //! 	let js_code = "function run_forever() { for(;;){} }";
-//! 	let mut script = Script::from_string(js_code)?;
+//! 	let mut script = Script::from_string(js_code)?
+//! 		.with_timeout(Duration::from_millis(1000));
 //!
-//! 	let result: Result<String, AnyError> = script.call("run_forever", &(), Some(1000));
+//! 	let result: Result<String, AnyError> = script.call("run_forever", &());
 //!
-//! 	debug_assert_eq!(result.unwrap_err().to_string(), "Uncaught Error: execution terminated".to_string());
+//! 	assert_eq!(
+//! 		result.unwrap_err().to_string(),
+//! 		"Uncaught Error: execution terminated".to_string()
+//! 	);
 //!
 //! 	Ok(())
 //! }

@@ -1,9 +1,9 @@
 // Copyright (c) 2020-2022 js-sandbox contributors. Zlib license.
 
-use std::{thread, time::Duration};
 use std::borrow::Cow;
 use std::path::Path;
 use std::rc::Rc;
+use std::{thread, time::Duration};
 
 use deno_core::{JsRuntime, OpState, RuntimeOptions, ZeroCopyBuf};
 use serde::de::DeserializeOwned;
@@ -18,12 +18,16 @@ use crate::{AnyError, JsValue};
 pub struct Script {
 	runtime: JsRuntime,
 	last_rid: u32,
+	timeout: Option<Duration>,
 }
 
 impl Script {
 	const DEFAULT_FILENAME: &'static str = "sandboxed.js";
 
-	/// Initialize a script with the given JavaScript source code
+	// ----------------------------------------------------------------------------------------------------------------------------------------------
+	// Constructors and builders
+
+	/// Initialize a script with the given JavaScript source code.
 	///
 	/// Returns a new object on success, and an error in case of syntax or initialization error with the code.
 	pub fn from_string(js_code: &str) -> Result<Self, AnyError> {
@@ -35,11 +39,12 @@ impl Script {
 		Self::create_script(&all_code, Self::DEFAULT_FILENAME)
 	}
 
-	/// Initialize a script by loading it from a .js file
+	/// Initialize a script by loading it from a .js file.
+	///
+	/// To load a file at compile time, you can use [`Self::from_string()`] in combination with the [`include_str!`] macro.
+	/// At the moment, a script is limited to a single file, and you will need to do bundling yourself (e.g. with `esbuild`).
 	///
 	/// Returns a new object on success. Fails if the file cannot be opened or in case of syntax or initialization error with the code.
-	///
-	/// At the moment, a script is limited to a single file, and you will need to do bundling yourself.
 	pub fn from_file(file: impl AsRef<Path>) -> Result<Self, AnyError> {
 		let filename = file
 			.as_ref()
@@ -54,38 +59,45 @@ impl Script {
 		}
 	}
 
+	/// Equips this script with a timeout, meaning that any function call is aborted after the specified duration.
+	///
+	/// This requires creating a separate thread for each function call, which tracks time and pulls the plug
+	/// if the JS function does not return in time. Use this for untrusted 3rd-party code, not if you know that
+	/// your functions always return.
+	///
+	/// Panics with invalid timeouts or if this script already has a timeout set.
+	pub fn with_timeout(mut self, timeout: Duration) -> Self {
+		assert!(self.timeout.is_none());
+		assert!(timeout > Duration::ZERO);
+
+		self.timeout = Some(timeout);
+		self
+	}
+
+	// ----------------------------------------------------------------------------------------------------------------------------------------------
+	// Call API
+
 	/// Invokes a JavaScript function.
 	///
 	/// Passes a single argument `args` to JS by serializing it to JSON (using serde_json).
 	/// Multiple arguments are currently not supported, but can easily be emulated using a `Vec` to work as a JSON array.
-	/// Optional value for `timeout_ms` forces script to run no more than specified number of milliseconds
-	pub fn call<P, R>(
-		&mut self,
-		fn_name: &str,
-		args: &P,
-		timeout_ms: Option<u64>,
-	) -> Result<R, AnyError>
+	pub fn call<P, R>(&mut self, fn_name: &str, args: &P) -> Result<R, AnyError>
 	where
 		P: Serialize,
 		R: DeserializeOwned,
 	{
 		let json_args = serde_json::to_value(args)?;
-		let json_result = self.call_json(fn_name, &json_args, timeout_ms)?;
+		let json_result = self.call_json(fn_name, &json_args)?;
 		let result: R = serde_json::from_value(json_result)?;
 
 		Ok(result)
 	}
 
-	pub(crate) fn call_json(
-		&mut self,
-		fn_name: &str,
-		args: &JsValue,
-		timeout_ms: Option<u64>,
-	) -> Result<JsValue, AnyError> {
+	pub(crate) fn call_json(&mut self, fn_name: &str, args: &JsValue) -> Result<JsValue, AnyError> {
 		// Note: ops() is required to initialize internal state
 		// Wrap everything in scoped block
 
-		// undefined will cause JSON serialization error, so it needs to be treated as null
+		// 'undefined' will cause JSON serialization error, so it needs to be treated as null
 		let js_code = format!(
 			"{{
 			let __rust_result = {f}({a});
@@ -99,11 +111,11 @@ impl Script {
 			a = args
 		);
 
-		if let Some(timeout_duration) = timeout_ms {
+		if let Some(timeout) = self.timeout {
 			let handle = self.runtime.v8_isolate().thread_safe_handle();
 
 			thread::spawn(move || {
-				thread::sleep(Duration::from_millis(timeout_duration));
+				thread::sleep(timeout);
 				handle.terminate_execution();
 			});
 		}
@@ -139,6 +151,7 @@ impl Script {
 		Ok(Script {
 			runtime,
 			last_rid: 0,
+			timeout: None,
 		})
 	}
 

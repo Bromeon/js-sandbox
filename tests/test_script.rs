@@ -1,6 +1,6 @@
 // Copyright (c) 2020-2022 js-sandbox contributors. Zlib license.
 
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
 
@@ -50,7 +50,7 @@ fn call() {
 		new_num: 12,
 	};
 
-	let result: JsResult = script.call("extract", &args, None).unwrap();
+	let result: JsResult = script.call("extract", &args).unwrap();
 	assert_eq!(result, exp_result);
 }
 
@@ -67,7 +67,7 @@ fn call_string() {
 		name: "Roger".to_string(),
 		age: 42,
 	};
-	let result: String = script.call("toString", &person, None).unwrap();
+	let result: String = script.call("toString", &person).unwrap();
 
 	assert_eq!(result, "A person named Roger with age 42");
 }
@@ -78,7 +78,7 @@ fn call_minimal() -> Result<(), AnyError> {
 	let mut script = Script::from_string(js_code)?;
 
 	let args = 7;
-	let result: i32 = script.call("triple", &args, None)?;
+	let result: i32 = script.call("triple", &args)?;
 
 	assert_eq!(result, 21);
 	Ok(())
@@ -90,7 +90,7 @@ fn call_void() -> Result<(), AnyError> {
 	let mut script = Script::from_string(js_code)?;
 
 	let args = "some text";
-	let _result: () = script.call("print", &args, None)?;
+	let _result: () = script.call("print", &args)?;
 
 	Ok(())
 }
@@ -108,7 +108,7 @@ fn call_from_file() {
 		new_num: 12,
 	};
 
-	let result: JsResult = script.call("extract", &args, None).unwrap();
+	let result: JsResult = script.call("extract", &args).unwrap();
 	assert_eq!(result, exp_result);
 }
 
@@ -120,10 +120,10 @@ fn call_local_state() {
 
 	let args = ();
 
-	let result: i32 = script.call("inc", &args, None).unwrap();
+	let result: i32 = script.call("inc", &args).unwrap();
 	assert_eq!(result, 1);
 
-	let result: i32 = script.call("inc", &args, None).unwrap();
+	let result: i32 = script.call("inc", &args).unwrap();
 	assert_eq!(result, 2);
 }
 
@@ -137,8 +137,8 @@ fn call_repeated() {
 
 	let args = 7;
 
-	let result_triple: i32 = script.call("triple", &args, None).unwrap();
-	let result_square: i32 = script.call("square", &args, None).unwrap();
+	let result_triple: i32 = script.call("triple", &args).unwrap();
+	let result_square: i32 = script.call("square", &args).unwrap();
 
 	assert_eq!(result_triple, 21);
 	assert_eq!(result_square, 49);
@@ -159,7 +159,7 @@ fn call_error_inexistent_function() {
 	let mut script = Script::from_string(src).expect("Initialization succeeds");
 
 	let args = 7;
-	let result: Result<i32, AnyError> = script.call("tripel", &args, None);
+	let result: Result<i32, AnyError> = script.call("tripel", &args);
 
 	expect_error(result, "Inexistent function");
 }
@@ -170,33 +170,35 @@ fn call_error_exception() {
 	let mut script = Script::from_string(src).expect("Initialization succeeds");
 
 	let args = 7;
-	let result: Result<i32, AnyError> = script.call("triple", &args, None);
+	let result: Result<i32, AnyError> = script.call("triple", &args);
 
 	expect_error(result, "Runtime exception");
 }
 
 #[test]
 fn call_error_timeout() {
-	let timeout = 200;
-	let expected_stop_time = 50;
+	let timeout = Duration::from_millis(200);
+	let expected_stop_time = Duration::from_millis(50);
 
 	let js_code = "function run_forever() { for(;;){} }";
-	let mut script = Script::from_string(js_code).expect("Initialization succeeds");
+	let mut script = Script::from_string(js_code)
+		.expect("Initialization succeeds")
+		.with_timeout(timeout);
 
 	let start = Instant::now();
-	let result: Result<String, AnyError> = script.call("run_forever", &(), Some(timeout));
-	let duration = start.elapsed().as_millis() as u64;
+	let result: Result<String, AnyError> = script.call("run_forever", &());
+	let duration = start.elapsed();
 
 	expect_error(result, "Timed out");
 	assert!(
 		duration >= timeout,
 		"Terminates before the specified timeout (at {}ms)",
-		duration
+		duration.as_millis()
 	);
 	assert!(
 		duration < timeout + expected_stop_time,
 		"Took longer than {}ms to terminate (stopped at {}ms)",
-		expected_stop_time,
-		duration
+		expected_stop_time.as_millis(),
+		duration.as_millis()
 	);
 }
