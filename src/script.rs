@@ -1,9 +1,9 @@
-// Copyright (c) 2020-2021 Jan Haller. zlib/libpng license.
+// Copyright (c) 2020-2022 js-sandbox contributors. Zlib license.
 
+use std::{thread, time::Duration};
 use std::borrow::Cow;
 use std::path::Path;
 use std::rc::Rc;
-use std::{thread, time::Duration};
 
 use deno_core::{JsRuntime, OpState, RuntimeOptions, ZeroCopyBuf};
 use serde::de::DeserializeOwned;
