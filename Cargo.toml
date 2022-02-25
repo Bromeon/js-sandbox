@@ -1,4 +1,7 @@
+# Copyright (c) 2020-2022 js-sandbox contributors. Zlib license.
+
 [workspace]
 members = [
-    "js-sandbox"
+    "js-sandbox",
+    "js-sandbox-macros",
 ]

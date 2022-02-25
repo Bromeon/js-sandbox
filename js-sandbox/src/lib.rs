@@ -149,6 +149,7 @@
 //! [Deno]: https://deno.land/
 //! [serde_json]: https://docs.serde.rs/serde_json
 
+pub use js_sandbox_macros::js_api;
 pub use script::Script;
 pub use util::eval_json;
 
