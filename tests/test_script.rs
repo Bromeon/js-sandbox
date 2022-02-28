@@ -9,7 +9,7 @@ use util::expect_error;
 
 mod util;
 
-#[derive(Serialize, Debug, PartialEq)]
+#[derive(Serialize, Debug)]
 struct JsArgs {
 	text: String,
 	num: i32,
@@ -21,7 +21,7 @@ struct JsResult {
 	new_num: i32,
 }
 
-#[derive(Serialize, PartialEq)]
+#[derive(Serialize)]
 struct Person {
 	name: String,
 	age: u8,
@@ -50,8 +50,21 @@ fn call() {
 		new_num: 12,
 	};
 
-	let result: JsResult = script.call("extract", &args).unwrap();
+	let result: JsResult = script.call("extract", (args,)).unwrap();
 	assert_eq!(result, exp_result);
+}
+
+#[test]
+fn call_multi_args() {
+	let src = r#"
+	function div(a, b) { return a / b; }
+	"#;
+
+	let mut script = Script::from_string(src).expect("Initialization succeeds");
+
+	let args = (15, 4);
+	let result: f32 = script.call("div", args).unwrap();
+	assert_eq!(result, 3.75);
 }
 
 #[test]
@@ -67,7 +80,7 @@ fn call_string() {
 		name: "Roger".to_string(),
 		age: 42,
 	};
-	let result: String = script.call("toString", &person).unwrap();
+	let result: String = script.call("toString", (person,)).unwrap();
 
 	assert_eq!(result, "A person named Roger with age 42");
 }
@@ -77,8 +90,8 @@ fn call_minimal() -> Result<(), AnyError> {
 	let js_code = "function triple(a) { return 3 * a; }";
 	let mut script = Script::from_string(js_code)?;
 
-	let args = 7;
-	let result: i32 = script.call("triple", &args)?;
+	let arg = 7;
+	let result: i32 = script.call("triple", (arg,))?;
 
 	assert_eq!(result, 21);
 	Ok(())
@@ -90,7 +103,7 @@ fn call_void() -> Result<(), AnyError> {
 	let mut script = Script::from_string(js_code)?;
 
 	let args = "some text";
-	let _result: () = script.call("print", &args)?;
+	let _result: () = script.call("print", (args,))?;
 
 	Ok(())
 }
@@ -108,7 +121,7 @@ fn call_from_file() {
 		new_num: 12,
 	};
 
-	let result: JsResult = script.call("extract", &args).unwrap();
+	let result: JsResult = script.call("extract", (args,)).unwrap();
 	assert_eq!(result, exp_result);
 }
 
@@ -120,10 +133,11 @@ fn call_local_state() {
 
 	let args = ();
 
-	let result: i32 = script.call("inc", &args).unwrap();
+	// Also test call-by-ref ('args' borrowed)
+	let result: i32 = script.call("inc", (&args,)).unwrap();
 	assert_eq!(result, 1);
 
-	let result: i32 = script.call("inc", &args).unwrap();
+	let result: i32 = script.call("inc", (args,)).unwrap();
 	assert_eq!(result, 2);
 }
 
@@ -137,8 +151,8 @@ fn call_repeated() {
 
 	let args = 7;
 
-	let result_triple: i32 = script.call("triple", &args).unwrap();
-	let result_square: i32 = script.call("square", &args).unwrap();
+	let result_triple: i32 = script.call("triple", (args,)).unwrap();
+	let result_square: i32 = script.call("square", (args,)).unwrap();
 
 	assert_eq!(result_triple, 21);
 	assert_eq!(result_square, 49);
@@ -159,7 +173,7 @@ fn call_error_inexistent_function() {
 	let mut script = Script::from_string(src).expect("Initialization succeeds");
 
 	let args = 7;
-	let result: Result<i32, AnyError> = script.call("tripel", &args);
+	let result: Result<i32, AnyError> = script.call("tripel", (args,));
 
 	expect_error(result, "Inexistent function");
 }
@@ -170,7 +184,7 @@ fn call_error_exception() {
 	let mut script = Script::from_string(src).expect("Initialization succeeds");
 
 	let args = 7;
-	let result: Result<i32, AnyError> = script.call("triple", &args);
+	let result: Result<i32, AnyError> = script.call("triple", (args,));
 
 	expect_error(result, "Runtime exception");
 }
@@ -186,7 +200,7 @@ fn call_error_timeout() {
 		.with_timeout(timeout);
 
 	let start = Instant::now();
-	let result: Result<String, AnyError> = script.call("run_forever", &());
+	let result: Result<String, AnyError> = script.call("run_forever", ());
 	let duration = start.elapsed();
 
 	expect_error(result, "Timed out");
