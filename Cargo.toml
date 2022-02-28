@@ -1,16 +1,7 @@
 # Copyright (c) 2020-2022 js-sandbox contributors. Zlib license.
 
-[package]
-name = "js-sandbox"
-version = "0.1.6"
-description = "Execute JavaScript code from Rust in a secure sandbox, and transport data to/from JS plug-ins."
-repository = "https://github.com/Bromeon/js-sandbox"
-authors = ["Jan Haller <bromeon@gmail.com>"]
-license = "Zlib"
-edition = "2021"
-readme = "ReadMe.md"
-
-[dependencies]
-deno_core = "0.114"
-serde_json = "1"
-serde = { version = "1", features = ["derive"] }
+[workspace]
+members = [
+    "js-sandbox",
+    "js-sandbox-macros",
+]

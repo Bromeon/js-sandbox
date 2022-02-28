@@ -7,9 +7,15 @@ use std::{thread, time::Duration};
 
 use deno_core::{JsRuntime, OpState, RuntimeOptions, ZeroCopyBuf};
 use serde::de::DeserializeOwned;
-use serde::Serialize;
 
+use crate::call_args::CallArgs;
 use crate::{AnyError, JsValue};
+
+pub trait JsApi<'a> {
+	fn from_script(script: &'a mut Script) -> Self
+	where
+		Self: Sized;
+}
 
 /// Represents a single JavaScript file that can be executed.
 ///
@@ -79,36 +85,48 @@ impl Script {
 
 	/// Invokes a JavaScript function.
 	///
-	/// Passes a single argument `args` to JS by serializing it to JSON (using serde_json).
-	/// Multiple arguments are currently not supported, but can easily be emulated using a `Vec` to work as a JSON array.
-	pub fn call<P, R>(&mut self, fn_name: &str, args: &P) -> Result<R, AnyError>
+	/// `args_tuple` needs to be a tuple.
+	///
+	/// Each tuple element is converted to JSON (using serde_json) and passed as a distinct argument to the JS function.
+	pub fn call<A, R>(&mut self, fn_name: &str, args_tuple: A) -> Result<R, AnyError>
 	where
-		P: Serialize,
+		A: CallArgs,
 		R: DeserializeOwned,
 	{
-		let json_args = serde_json::to_value(args)?;
-		let json_result = self.call_json(fn_name, &json_args)?;
+		let json_args = args_tuple.into_arg_string()?;
+		let json_result = self.call_impl(fn_name, json_args)?;
 		let result: R = serde_json::from_value(json_result)?;
 
 		Ok(result)
 	}
 
+	pub fn bind_api<'a, A>(&'a mut self) -> A
+	where
+		A: JsApi<'a>,
+	{
+		A::from_script(self)
+	}
+
 	pub(crate) fn call_json(&mut self, fn_name: &str, args: &JsValue) -> Result<JsValue, AnyError> {
+		self.call_impl(fn_name, args.to_string())
+	}
+
+	fn call_impl(&mut self, fn_name: &str, json_args: String) -> Result<JsValue, AnyError> {
 		// Note: ops() is required to initialize internal state
 		// Wrap everything in scoped block
 
 		// 'undefined' will cause JSON serialization error, so it needs to be treated as null
 		let js_code = format!(
 			"{{
-			let __rust_result = {f}({a});
-			if (typeof __rust_result === 'undefined')
-				__rust_result = null;
+				let __rust_result = {f}({a});
+				if (typeof __rust_result === 'undefined')
+					__rust_result = null;
 
-			Deno.core.ops();
-			Deno.core.opSync(\"__rust_return\", __rust_result);\
-		}}",
+				Deno.core.ops();
+				Deno.core.opSync(\"__rust_return\", __rust_result);\
+			}}",
 			f = fn_name,
-			a = args
+			a = json_args
 		);
 
 		if let Some(timeout) = self.timeout {
@@ -123,6 +141,7 @@ impl Script {
 		// syncing ops is required cause they sometimes change while preparing the engine
 		self.runtime.sync_ops_cache();
 
+		// TODO use strongly typed JsError here (downcast)
 		self.runtime
 			.execute_script(Self::DEFAULT_FILENAME, &js_code)?;
 
