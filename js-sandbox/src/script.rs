@@ -11,6 +11,12 @@ use serde::de::DeserializeOwned;
 use crate::call_args::CallArgs;
 use crate::{AnyError, JsValue};
 
+pub trait JsApi<'a> {
+	fn from_script(script: &'a mut Script) -> Self
+	where
+		Self: Sized;
+}
+
 /// Represents a single JavaScript file that can be executed.
 ///
 /// The code can be loaded from a file or from a string in memory.
@@ -94,6 +100,13 @@ impl Script {
 		Ok(result)
 	}
 
+	pub fn bind_api<'a, A>(&'a mut self) -> A
+	where
+		A: JsApi<'a>,
+	{
+		A::from_script(self)
+	}
+
 	pub(crate) fn call_json(&mut self, fn_name: &str, args: &JsValue) -> Result<JsValue, AnyError> {
 		self.call_impl(fn_name, args.to_string())
 	}
@@ -105,13 +118,13 @@ impl Script {
 		// 'undefined' will cause JSON serialization error, so it needs to be treated as null
 		let js_code = format!(
 			"{{
-			let __rust_result = {f}({a});
-			if (typeof __rust_result === 'undefined')
-				__rust_result = null;
+				let __rust_result = {f}({a});
+				if (typeof __rust_result === 'undefined')
+					__rust_result = null;
 
-			Deno.core.ops();
-			Deno.core.opSync(\"__rust_return\", __rust_result);\
-		}}",
+				Deno.core.ops();
+				Deno.core.opSync(\"__rust_return\", __rust_result);\
+			}}",
 			f = fn_name,
 			a = json_args
 		);
@@ -128,6 +141,7 @@ impl Script {
 		// syncing ops is required cause they sometimes change while preparing the engine
 		self.runtime.sync_ops_cache();
 
+		// TODO use strongly typed JsError here (downcast)
 		self.runtime
 			.execute_script(Self::DEFAULT_FILENAME, &js_code)?;
 
