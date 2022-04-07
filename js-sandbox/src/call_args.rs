@@ -3,6 +3,10 @@
 use crate::AnyError;
 use serde::Serialize;
 
+/// Trait that is implemented for types that can be passed as argument to `Script::call()`.
+///
+/// This is currently only implemented for tuples of size 0..=5, i.e. JS functions with 0 to 5 arguments.
+/// Use structs or arrays inside a one-element tuple if you need more flexibility.
 pub trait CallArgs {
 	fn into_arg_string(self) -> Result<String, AnyError>;
 }

@@ -1,5 +1,6 @@
 // Copyright (c) 2020-2022 js-sandbox contributors. Zlib license.
 
+use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
@@ -68,7 +69,7 @@ fn call_multi_args() {
 }
 
 #[test]
-fn call_string() {
+fn call_struct_to_string() {
 	let src = r#"
 	function toString(person) {
 		return "A person named " + person.name + " with age " + person.age;
@@ -83,6 +84,25 @@ fn call_string() {
 	let result: String = script.call("toString", (person,)).unwrap();
 
 	assert_eq!(result, "A person named Roger with age 42");
+}
+
+#[test]
+fn call_hashmap_to_hashmap() {
+	let src = r#"
+	function fillMap(map) {
+		map.cats = 2;
+		return map;
+	}"#;
+
+	let mut script = Script::from_string(src).expect("Initialization succeeds");
+
+	let map = HashMap::from([("dogs", 3)]);
+	let result: HashMap<String, i32> = script.call("fillMap", (map,)).unwrap();
+
+	assert_eq!(
+		result,
+		HashMap::from([("dogs".to_string(), 3), ("cats".to_string(), 2)])
+	);
 }
 
 #[test]
