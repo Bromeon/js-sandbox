@@ -1,6 +1,6 @@
 // Copyright (c) 2020-2022 js-sandbox contributors. Zlib license.
 
-// Note: the crate documentation is copied to ReadMe.md using cargo-readme:  cargo readme --no-license > ReadMe.md
+// Note: the crate documentation is copied to ReadMe.md using cargo-readme (see CI)
 // Alternatives:
 // * once stable: #![feature(external_doc)] #![doc(include = "../ReadMe.md")]
 // * doc_comment crate + doctest!("../ReadMe.md");  -- works for running doc-tests, but not for doc on crate level

@@ -20,17 +20,49 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Check Rust version
-        run: rustc --version
-      #      - uses: actions-rs/toolchain@v1
-      #        with:
-      #          profile: minimal
-      #          toolchain: stable
-      #          override: true # use selected toolchain for remainder of this step
-      #          components: ${{ inputs.components }}
-      - name: Initialize cache
+
+      - name: "Initialize cache"
         uses: Swatinem/rust-cache@v1
-      - name: Build
+
+      - name: "Build"
         run: cargo build
-      - name: Run tests
+
+      - name: "Run tests"
         run: cargo test
+
+
+  rustfmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: "Format code"
+        run: cargo fmt -- --check
+
+
+  sync-readme:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: "Install cargo-readme"
+        #run: cargo install cargo-readme
+        uses: baptiste0928/cargo-install@v1
+        with:
+          crate: cargo-readme
+
+      - name: "Sync js-sandbox/lib.rs with ReadMe.md"
+        id: prepareCommit
+        run: |
+          cd js-sandbox
+          cargo readme --no-license --template ../cfg/ReadMe.in > ../ReadMe.md
+          git diff --exit-code || echo ::set-output name=docsChanged::true
+
+      - name: "Commit changes if needed"
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          # If not specified, author is the one of prev commit (but with @users.noreply.github.com)
+          commit_message: "Auto-sync ReadMe.md"
+          #commit_author: "GitHub Actions <actions@github.com>"
+        if: ${{ steps.prepareCommit.outputs.docsChanged == 'true' }}
