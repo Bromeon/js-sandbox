@@ -57,6 +57,7 @@ jobs:
         run: |
           cd js-sandbox
           cargo readme --no-license --template ../cfg/ReadMe.in > ../ReadMe.md
+          sed -i $'s/\t/    /g' ../ReadMe.md
           git diff --exit-code || echo ::set-output name=docsChanged::true
 
       - name: "Commit changes if needed"
