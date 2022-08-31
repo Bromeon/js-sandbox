@@ -16,6 +16,17 @@ env:
 #  cancel-in-progress: true
 
 jobs:
+  semver-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: "Check SemVer"
+        uses: obi1kenobi/cargo-semver-checks-action@v1
+        with:
+          crate-name: js-sandbox
+          version-tag-prefix: ''
+
   build-and-test:
     runs-on: ubuntu-latest
     steps:
