@@ -5,6 +5,7 @@ use std::path::Path;
 use std::rc::Rc;
 use std::{thread, time::Duration};
 
+use deno_core::v8::CreateParams;
 use deno_core::{JsRuntime, OpState, RuntimeOptions, ZeroCopyBuf};
 use serde::de::DeserializeOwned;
 
@@ -25,6 +26,7 @@ pub struct Script {
 	runtime: JsRuntime,
 	last_rid: u32,
 	timeout: Option<Duration>,
+	memory_limit: Option<Duration>,
 }
 
 impl Script {
@@ -77,6 +79,24 @@ impl Script {
 		assert!(timeout > Duration::ZERO);
 
 		self.timeout = Some(timeout);
+		self
+	}
+
+	pub fn with_memory_limit(mut self, _bytes: usize) -> Self {
+		assert!(self.memory_limit.is_none());
+
+let runtime = &mut self.runtime;
+let handle = runtime.v8_isolate().thread_safe_handle();
+let callback = move |current_limit: usize, initial_limit: usize| -> usize {
+	eprintln!("Near heap limit! current={current_limit}, initial={initial_limit}");
+	handle.terminate_execution();
+	current_limit
+};
+
+self.runtime.add_near_heap_limit_callback(callback);
+
+		eprintln!("Near-heap cb set");
+		//self.timeout = Some(timeout);
 		self
 	}
 
@@ -161,9 +181,14 @@ impl Script {
 	}
 
 	fn create_script(js_code: &str, js_filename: &str) -> Result<Self, AnyError> {
-		let options = RuntimeOptions::default();
+let initial = 100 * 1024;
+let limits = 5 * 1024 * 1024;
+let options = RuntimeOptions {
+	create_params: Some(CreateParams::default().heap_limits(initial, limits)),
+	..Default::default()
+};
 
-		let mut runtime = JsRuntime::new(options);
+let mut runtime = JsRuntime::new(options);
 		runtime.execute_script(js_filename, &js_code)?;
 		runtime.register_op("__rust_return", deno_core::op_sync(Self::op_return));
 
@@ -171,6 +196,7 @@ impl Script {
 			runtime,
 			last_rid: 0,
 			timeout: None,
+			memory_limit: None,
 		})
 	}
 

@@ -236,3 +236,29 @@ fn call_error_timeout() {
 		duration.as_millis()
 	);
 }
+
+#[test]
+fn call_error_memory() {
+	let js_code = r#"
+function allocate() {
+	let arr = []
+	for (let i = 0; i < 1024; ++i) {
+		let s = new Uint8Array(1024);
+		arr.push(s)
+	}
+
+	return arr[4][333];
+}"#;
+
+	eprintln!("Start test");
+	let mut script = Script::from_string(js_code)
+		.expect("Initialization succeeds")
+		.with_memory_limit(50000);
+	eprintln!("After script");
+
+	let result: Result<u8, AnyError> = script.call("allocate", ());
+	let i = result.unwrap();
+	eprintln!("Result: {i}");
+
+	//expect_error(result, "Timed out");
+}
