@@ -117,14 +117,14 @@ impl Script {
 
 		// 'undefined' will cause JSON serialization error, so it needs to be treated as null
 		let js_code = format!(
-			"{{
-				let __rust_result = {f}({a});
+			"(async () => {{
+				let __rust_result = {f}.constructor.name === 'AsyncFunction' ? await {f}({a}) : {f}({a});
 				if (typeof __rust_result === 'undefined')
 					__rust_result = null;
 
 				Deno.core.ops();
 				Deno.core.opSync(\"__rust_return\", __rust_result);\
-			}}",
+			}})()",
 			f = fn_name,
 			a = json_args
 		);
@@ -144,6 +144,7 @@ impl Script {
 		// TODO use strongly typed JsError here (downcast)
 		self.runtime
 			.execute_script(Self::DEFAULT_FILENAME, &js_code)?;
+		futures::executor::block_on(self.runtime.run_event_loop(false))?;
 
 		let state_rc = self.runtime.op_state();
 		let mut state = state_rc.borrow_mut();
