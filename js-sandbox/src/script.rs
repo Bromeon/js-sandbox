@@ -85,6 +85,8 @@ impl Script {
 
 	/// Invokes a JavaScript function.
 	///
+	/// Blocks on asynchronous functions until completion.
+	///
 	/// `args_tuple` needs to be a tuple.
 	///
 	/// Each tuple element is converted to JSON (using serde_json) and passed as a distinct argument to the JS function.
