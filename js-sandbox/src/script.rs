@@ -146,7 +146,7 @@ impl Script {
 		// TODO use strongly typed JsError here (downcast)
 		self.runtime
 			.execute_script(Self::DEFAULT_FILENAME, &js_code)?;
-		futures::executor::block_on(self.runtime.run_event_loop(false))?;
+		deno_core::futures::executor::block_on(self.runtime.run_event_loop(false))?;
 
 		let state_rc = self.runtime.op_state();
 		let mut state = state_rc.borrow_mut();

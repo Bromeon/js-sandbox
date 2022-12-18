@@ -16,4 +16,3 @@ js-sandbox-macros = { path = "../js-sandbox-macros", version = "=0.2.0-rc.0" }
 deno_core = "0.114"
 serde_json = "1"
 serde = { version = "1", features = ["derive"] }
-futures = "0.3"
