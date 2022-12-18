@@ -236,3 +236,18 @@ fn call_error_timeout() {
 		duration.as_millis()
 	);
 }
+
+#[test]
+fn call_async() {
+	let src = r#"
+	async function async_func() {
+		return new Promise((resolve) => resolve(3));
+	}
+	"#;
+
+	let mut script = Script::from_string(src).expect("Initialization succeeds");
+
+	let result: i32 = script.call("async_func", ()).unwrap();
+
+	assert_eq!(result, 3);
+}
