@@ -5,7 +5,7 @@ use std::path::Path;
 use std::rc::Rc;
 use std::{thread, time::Duration};
 
-use deno_core::{JsRuntime, OpState, RuntimeOptions, ZeroCopyBuf};
+use deno_core::{op, Extension, JsRuntime, OpState, ZeroCopyBuf};
 use serde::de::DeserializeOwned;
 
 use crate::call_args::CallArgs;
@@ -124,8 +124,7 @@ impl Script {
 				if (typeof __rust_result === 'undefined')
 					__rust_result = null;
 
-				Deno.core.ops();
-				Deno.core.opSync(\"__rust_return\", __rust_result);\
+				Deno.core.ops.op_return(__rust_result);
 			}})()",
 			f = fn_name,
 			a = json_args
@@ -141,7 +140,7 @@ impl Script {
 		}
 
 		// syncing ops is required cause they sometimes change while preparing the engine
-		self.runtime.sync_ops_cache();
+		// self.runtime.sync_ops_cache();
 
 		// TODO use strongly typed JsError here (downcast)
 		self.runtime
@@ -164,30 +163,20 @@ impl Script {
 	}
 
 	fn create_script(js_code: &str, js_filename: &str) -> Result<Self, AnyError> {
-		let options = RuntimeOptions::default();
+		let ext = Extension::builder().ops(vec![(op_return::decl())]).build();
 
-		let mut runtime = JsRuntime::new(options);
+		let mut runtime = deno_core::JsRuntime::new(deno_core::RuntimeOptions {
+			module_loader: Some(Rc::new(deno_core::FsModuleLoader)),
+			extensions: vec![ext],
+			..Default::default()
+		});
 		runtime.execute_script(js_filename, &js_code)?;
-		runtime.register_op("__rust_return", deno_core::op_sync(Self::op_return));
 
 		Ok(Script {
 			runtime,
 			last_rid: 0,
 			timeout: None,
 		})
-	}
-
-	fn op_return(
-		state: &mut OpState,
-		args: JsValue,
-		_buf: Option<ZeroCopyBuf>,
-	) -> Result<JsValue, AnyError> {
-		let entry = ResultResource { json_value: args };
-		let resource_table = &mut state.resource_table;
-		let _rid = resource_table.add(entry);
-		//assert_eq!(rid, self.last_rid);
-
-		Ok(serde_json::Value::Null)
 	}
 }
 
@@ -201,4 +190,16 @@ impl deno_core::Resource for ResultResource {
 	fn name(&self) -> Cow<str> {
 		"__rust_Result".into()
 	}
+}
+
+#[op]
+fn op_return(
+	state: &mut OpState,
+	args: JsValue,
+	_buf: Option<ZeroCopyBuf>,
+) -> Result<JsValue, deno_core::error::AnyError> {
+	let entry = ResultResource { json_value: args };
+	let resource_table = &mut state.resource_table;
+	let _rid = resource_table.add(entry);
+	Ok(serde_json::Value::Null)
 }
