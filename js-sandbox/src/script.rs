@@ -144,7 +144,7 @@ impl Script {
 
 		// TODO use strongly typed JsError here (downcast)
 		self.runtime
-			.execute_script(Self::DEFAULT_FILENAME, &js_code)?;
+			.execute_script(Self::DEFAULT_FILENAME, js_code)?;
 		deno_core::futures::executor::block_on(self.runtime.run_event_loop(false))?;
 
 		let state_rc = self.runtime.op_state();
@@ -163,14 +163,14 @@ impl Script {
 	}
 
 	fn create_script(js_code: &str, js_filename: &str) -> Result<Self, AnyError> {
-		let ext = Extension::builder().ops(vec![(op_return::decl())]).build();
+		let ext = Extension::builder("script").ops(vec![(op_return::decl())]).build();
 
 		let mut runtime = deno_core::JsRuntime::new(deno_core::RuntimeOptions {
 			module_loader: Some(Rc::new(deno_core::FsModuleLoader)),
 			extensions: vec![ext],
 			..Default::default()
 		});
-		runtime.execute_script(js_filename, &js_code)?;
+		runtime.execute_script(Self::DEFAULT_FILENAME, js_code.to_string())?;
 
 		Ok(Script {
 			runtime,
