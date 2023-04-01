@@ -163,7 +163,9 @@ impl Script {
 	}
 
 	fn create_script(js_code: &str, js_filename: &str) -> Result<Self, AnyError> {
-		let ext = Extension::builder("script").ops(vec![(op_return::decl())]).build();
+		let ext = Extension::builder("script")
+			.ops(vec![(op_return::decl())])
+			.build();
 
 		let mut runtime = deno_core::JsRuntime::new(deno_core::RuntimeOptions {
 			module_loader: Some(Rc::new(deno_core::FsModuleLoader)),
