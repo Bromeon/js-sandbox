@@ -2,10 +2,10 @@
 
 [package]
 name = "js-sandbox-macros"
-version = "0.2.0-rc.0"
+version = "0.2.0-rc.1"
 description = "Procedural macros for js-sandbox"
 repository = "https://github.com/Bromeon/js-sandbox"
-documentation = "https://docs.rs/crate/js-sandbox-macros"
+documentation = "https://docs.rs/js-sandbox-macros/0.2.0-rc.1"
 authors = ["Jan Haller <bromeon@gmail.com>"]
 license = "Zlib"
 edition = "2021"
