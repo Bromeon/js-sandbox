@@ -72,7 +72,7 @@ fn generate_impl_methods(item: &syn::ItemTrait) -> syn::Result<TokenStream2> {
 	let mut result = TokenStream2::new();
 	for item in item.items.iter() {
 		let method = match item {
-			syn::TraitItem::Method(f) => f,
+			syn::TraitItem::Fn(f) => f,
 			other => syntax_error!(other, "only methods are allowed"),
 		};
 		if let Some(tok) = &method.sig.constness {
@@ -84,11 +84,12 @@ fn generate_impl_methods(item: &syn::ItemTrait) -> syn::Result<TokenStream2> {
 		if let Some(tok) = &method.default {
 			syntax_error!(tok, "cannot specify an implementation of methods");
 		}
-		if let Some(tok) = method.sig.receiver() {
-			if let syn::FnArg::Receiver(rcv) = tok {
-				if rcv.mutability.is_none() {
-					syntax_error!(rcv, "receiver must be `&mut self`; values and shared references are not supported");
-				}
+		if let Some(rcv) = method.sig.receiver() {
+			if rcv.mutability.is_none() {
+				syntax_error!(
+					rcv,
+					"receiver must be `&mut self`; values and shared references are not supported"
+				);
 			}
 		} else {
 			syntax_error!(
