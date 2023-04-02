@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2022 js-sandbox contributors. Zlib license.
+// Copyright (c) 2020-2023 js-sandbox contributors. Zlib license.
 
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
@@ -167,7 +167,7 @@ fn parse_return_type(tok: &syn::ReturnType) -> syn::Result<ReturnType> {
 	match tok {
 		syn::ReturnType::Default => {
 			// no explicit return type
-			return Ok(ReturnType::Unit);
+			Ok(ReturnType::Unit)
 		}
 		syn::ReturnType::Type(_, ty) => {
 			if let syn::Type::Path(path) = ty.as_ref() {
@@ -178,10 +178,8 @@ fn parse_return_type(tok: &syn::ReturnType) -> syn::Result<ReturnType> {
 					match &seg.arguments {
 						syn::PathArguments::None => {}
 						syn::PathArguments::AngleBracketed(ret) => {
-							if let Some(arg) = ret.args.first() {
-								if let syn::GenericArgument::Type(ty) = arg {
-									return Ok(ReturnType::ResultWrap((*ty).clone()));
-								}
+							if let Some(syn::GenericArgument::Type(ty)) = ret.args.first() {
+								return Ok(ReturnType::ResultWrap((*ty).clone()));
 							}
 						}
 						syn::PathArguments::Parenthesized(_) => {}

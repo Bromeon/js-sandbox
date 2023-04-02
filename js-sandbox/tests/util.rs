@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2022 js-sandbox contributors. Zlib license.
+// Copyright (c) 2020-2023 js-sandbox contributors. Zlib license.
 
 use deno_core::error::JsError;
 
@@ -6,15 +6,15 @@ use js_sandbox::AnyError;
 
 pub fn expect_error<T>(result: Result<T, AnyError>, error_type: &str) {
 	let err = match result {
-		Ok(_) => panic!("Call with {} must not succeed", error_type),
+		Ok(_) => panic!("Call with {error_type} must not succeed"),
 		Err(e) => e,
 	};
 
 	let err = err
 		.downcast_ref::<JsError>()
-		.expect(&format!("{} must lead to JsError type", error_type));
+		.unwrap_or_else(|| panic!("{error_type} must lead to JsError type"));
 
 	let msg = err.message.clone().unwrap_or(String::from("unknown"));
 
-	println!("Expected error occurred:\n{}", msg);
+	println!("Expected error occurred:\n{msg}");
 }

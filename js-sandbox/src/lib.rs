@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2022 js-sandbox contributors. Zlib license.
+// Copyright (c) 2020-2023 js-sandbox contributors. Zlib license.
 
 // Note: the crate documentation is copied to ReadMe.md using cargo-readme (see CI)
 // Alternatives:
@@ -23,6 +23,7 @@
 //!
 //! The _Hello World_ example -- print something using JavaScript -- is one line, as it should be:
 //! ```rust
+//! # #[allow(clippy::needless_doctest_main)]
 //! fn main() {
 //! 	js_sandbox::eval_json("console.log('Hello Rust from JS')").expect("JS runs");
 //! }
@@ -30,7 +31,7 @@
 //!
 //! ## Call a JS function
 //!
-//! A very basic application calls a JavaScript function `triple()` from Rust. It passes an argument and accepts a return value, both serialized via JSON:
+//! A very basic application calls a JavaScript function `sub()` from Rust. It passes an argument and accepts a return value, both serialized via JSON:
 //!
 //! ```rust
 //! use js_sandbox::{Script, AnyError};
@@ -60,15 +61,14 @@
 //!
 //! fn main() -> Result<(), AnyError> {
 //! 	let src = r#"
-//! 		function toString(person) {
-//! 			return "A person named " + person.name + " of age " + person.age;
-//! 		}"#;
+//!         function toString(person) {
+//!             return "A person named " + person.name + " of age " + person.age;
+//!         }"#;
 //!
-//! 	let mut script = Script::from_string(src)
-//! 		.expect("Initialization succeeds");
+//! 	let mut script = Script::from_string(src)?;
 //!
 //! 	let person = Person { name: "Roger".to_string(), age: 42 };
-//! 	let result: String = script.call("toString", (person,)).unwrap();
+//! 	let result: String = script.call("toString", (person,))?;
 //!
 //! 	assert_eq!(result, "A person named Roger of age 42");
 //! 	Ok(())
@@ -82,15 +82,17 @@
 //! If you want to statically embed UTF-8 encoded files in the Rust binary, you can alternatively use the
 //! [`std::include_str`](https://doc.rust-lang.org/std/macro.include_str.html) macro.
 //!
-//! ```no_run
-//! # macro_rules! include_str { ($s:expr) => { "" } } // very trick
+//! ```rust,no_run
+//! # macro_rules! include_str { ( $($tt:tt)* ) => { "" } }
 //! use js_sandbox::Script;
 //!
 //! fn main() {
-//! 	let mut script = Script::from_file("script.js").expect("Load + init succeeds");
-//! 	// or, at compile time:
+//! 	// (1) at runtime:
+//! 	let mut script = Script::from_file("script.js").expect("load + init succeeds");
+//!
+//! 	// (2) at compile time:
 //! 	let code: &'static str = include_str!("script.js");
-//! 	let mut script = Script::from_string(code).expect("Init succeeds");
+//! 	let mut script = Script::from_string(code).expect("init succeeds");
 //!
 //! 	// use script as usual
 //! }
@@ -106,9 +108,9 @@
 //!
 //! fn main() -> Result<(), AnyError> {
 //! 	let src = r#"
-//! 		var total = '';
-//! 		function append(str) { total += str; }
-//! 		function get()       { return total; }"#;
+//!         var total = '';
+//!         function append(str) { total += str; }
+//!         function get()       { return total; }"#;
 //!
 //! 	let mut script = Script::from_string(src)?;
 //!
@@ -123,15 +125,15 @@
 //!
 //! ## Call a script with timeout
 //!
-//! The JS code may contain long or forever running loops, that block Rust code. It is possible to set
-//! a timeout after which JS script execution is aborted.
+//! The JS code may contain long- or forever-running loops that block Rust code. It is possible to set
+//! a timeout, after which JavaScript execution is aborted.
 //!
 //! ```rust
 //! use js_sandbox::{Script, AnyError};
 //!
 //! fn main() -> Result<(), AnyError> {
 //! 	use std::time::Duration;
-//! 	let js_code = "function run_forever() { for(;;){} }";
+//! 	let js_code = "function run_forever() { for(;;) {} }";
 //! 	let mut script = Script::from_string(js_code)?
 //! 		.with_timeout(Duration::from_millis(1000));
 //!
@@ -146,7 +148,7 @@
 //! }
 //! ```
 //!
-//! [Deno]: https://deno.land/
+//! [Deno]: https://deno.land
 //! [serde_json]: https://docs.serde.rs/serde_json
 
 pub use js_sandbox_macros::js_api;

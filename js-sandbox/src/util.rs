@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2022 js-sandbox contributors. Zlib license.
+// Copyright (c) 2020-2023 js-sandbox contributors. Zlib license.
 
 use crate::{AnyError, JsValue, Script};
 
@@ -11,10 +11,9 @@ pub fn eval_json(js_expr: &str) -> Result<JsValue, AnyError> {
 	let code = format!(
 		"
 		function __rust_expr() {{
-			return ({expr});
+			return ({js_expr});
 		}}
-	",
-		expr = js_expr
+	"
 	);
 
 	let mut script = Script::from_string(&code)?;

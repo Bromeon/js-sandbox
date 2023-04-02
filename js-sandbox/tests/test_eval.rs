@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2022 js-sandbox contributors. Zlib license.
+// Copyright (c) 2020-2023 js-sandbox contributors. Zlib license.
 
 use js_sandbox::JsValue;
 use util::expect_error;
