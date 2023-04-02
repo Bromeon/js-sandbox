@@ -23,6 +23,7 @@
 //!
 //! The _Hello World_ example -- print something using JavaScript -- is one line, as it should be:
 //! ```rust
+//! # #[allow(clippy::needless_doctest_main)]
 //! fn main() {
 //! 	js_sandbox::eval_json("console.log('Hello Rust from JS')").expect("JS runs");
 //! }

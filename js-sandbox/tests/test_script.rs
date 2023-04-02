@@ -1,5 +1,7 @@
 // Copyright (c) 2020-2022 js-sandbox contributors. Zlib license.
 
+#![allow(clippy::let_unit_value)]
+
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 

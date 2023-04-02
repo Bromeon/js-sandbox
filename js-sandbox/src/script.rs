@@ -42,7 +42,7 @@ impl Script {
 			"const console = { log: function(expr) { Deno.core.print(expr + '\\n', false); } };"
 				.to_string() + js_code;
 
-		Self::create_script(&all_code, Self::DEFAULT_FILENAME)
+		Self::create_script(all_code)
 	}
 
 	/// Initialize a script by loading it from a .js file.
@@ -52,15 +52,15 @@ impl Script {
 	///
 	/// Returns a new object on success. Fails if the file cannot be opened or in case of syntax or initialization error with the code.
 	pub fn from_file(file: impl AsRef<Path>) -> Result<Self, AnyError> {
-		let filename = file
-			.as_ref()
-			.file_name()
-			.and_then(|s| s.to_str())
-			.unwrap_or(Self::DEFAULT_FILENAME)
-			.to_owned();
+		// let filename = file
+		// 	.as_ref()
+		// 	.file_name()
+		// 	.and_then(|s| s.to_str())
+		// 	.unwrap_or(Self::DEFAULT_FILENAME)
+		// 	.to_owned();
 
 		match std::fs::read_to_string(file) {
-			Ok(js_code) => Self::create_script(&js_code, &filename),
+			Ok(js_code) => Self::create_script(js_code),
 			Err(e) => Err(AnyError::from(e)),
 		}
 	}
@@ -120,14 +120,15 @@ impl Script {
 		// 'undefined' will cause JSON serialization error, so it needs to be treated as null
 		let js_code = format!(
 			"(async () => {{
-				let __rust_result = {f}.constructor.name === 'AsyncFunction' ? await {f}({a}) : {f}({a});
+				let __rust_result = {fn_name}.constructor.name === 'AsyncFunction'
+					? await {fn_name}({json_args})
+					: {fn_name}({json_args});
+
 				if (typeof __rust_result === 'undefined')
 					__rust_result = null;
 
 				Deno.core.ops.op_return(__rust_result);
-			}})()",
-			f = fn_name,
-			a = json_args
+			}})()"
 		);
 
 		if let Some(timeout) = self.timeout {
@@ -162,17 +163,19 @@ impl Script {
 		Ok(extracted.json_value)
 	}
 
-	fn create_script(js_code: &str, js_filename: &str) -> Result<Self, AnyError> {
+	fn create_script(js_code: String) -> Result<Self, AnyError> {
 		let ext = Extension::builder("script")
 			.ops(vec![(op_return::decl())])
 			.build();
 
-		let mut runtime = deno_core::JsRuntime::new(deno_core::RuntimeOptions {
+		let mut runtime = JsRuntime::new(deno_core::RuntimeOptions {
 			module_loader: Some(Rc::new(deno_core::FsModuleLoader)),
 			extensions: vec![ext],
 			..Default::default()
 		});
-		runtime.execute_script(Self::DEFAULT_FILENAME, js_code.to_string())?;
+
+		// We cannot provide a dynamic filename because execute_script() requires a &'static str
+		runtime.execute_script(Self::DEFAULT_FILENAME, js_code)?;
 
 		Ok(Script {
 			runtime,
