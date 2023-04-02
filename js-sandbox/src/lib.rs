@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2022 js-sandbox contributors. Zlib license.
+// Copyright (c) 2020-2023 js-sandbox contributors. Zlib license.
 
 // Note: the crate documentation is copied to ReadMe.md using cargo-readme (see CI)
 // Alternatives:
