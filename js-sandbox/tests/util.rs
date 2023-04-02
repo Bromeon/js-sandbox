@@ -14,5 +14,7 @@ pub fn expect_error<T>(result: Result<T, AnyError>, error_type: &str) {
 		.downcast_ref::<JsError>()
 		.expect(&format!("{} must lead to JsError type", error_type));
 
-	println!("Expected error occurred:\n{}", err.message);
+	let msg = err.message.clone().unwrap_or(String::from("unknown"));
+
+	println!("Expected error occurred:\n{}", msg);
 }
