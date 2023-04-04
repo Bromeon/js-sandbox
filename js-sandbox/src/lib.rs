@@ -154,6 +154,7 @@
 pub use js_sandbox_macros::js_api;
 pub use script::*;
 pub use util::eval_json;
+pub use call_args::CallArgs;
 
 /// Represents a value passed to or from JavaScript.
 ///
