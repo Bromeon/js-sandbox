@@ -151,10 +151,10 @@
 //! [Deno]: https://deno.land
 //! [serde_json]: https://docs.serde.rs/serde_json
 
+pub use call_args::CallArgs;
 pub use js_sandbox_macros::js_api;
 pub use script::*;
 pub use util::eval_json;
-pub use call_args::CallArgs;
 
 /// Represents a value passed to or from JavaScript.
 ///
