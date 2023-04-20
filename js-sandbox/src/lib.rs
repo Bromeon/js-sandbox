@@ -161,14 +161,18 @@ pub use util::eval_json;
 /// Currently aliased as serde_json's Value type.
 pub type JsValue = serde_json::Value;
 
+/// Error occuring during script execution
+pub use js_error::JsError;
+
 /// Polymorphic error type able to represent different error domains.
 ///
 /// Currently reusing [anyhow::Error](../anyhow/enum.Error.html), this type may change slightly in the future depending on js-sandbox's needs.
 // use through deno_core, to make sure same version of anyhow crate is used
 pub type AnyError = deno_core::error::AnyError;
 
-pub type JsResult<T> = Result<T, AnyError>;
+pub type JsResult<T> = Result<T, JsError>;
 
 mod call_args;
+mod js_error;
 mod script;
 mod util;
