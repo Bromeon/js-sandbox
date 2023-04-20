@@ -129,15 +129,15 @@
 //! a timeout, after which JavaScript execution is aborted.
 //!
 //! ```rust
-//! use js_sandbox::{Script, AnyError};
+//! use js_sandbox::{Script, JsError};
 //!
-//! fn main() -> Result<(), AnyError> {
+//! fn main() -> Result<(), JsError> {
 //! 	use std::time::Duration;
 //! 	let js_code = "function run_forever() { for(;;) {} }";
 //! 	let mut script = Script::from_string(js_code)?
 //! 		.with_timeout(Duration::from_millis(1000));
 //!
-//! 	let result: Result<String, AnyError> = script.call("run_forever", ());
+//! 	let result: Result<String, JsError> = script.call("run_forever", ());
 //!
 //! 	assert_eq!(
 //! 		result.unwrap_err().to_string(),
