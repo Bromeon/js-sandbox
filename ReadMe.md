@@ -24,7 +24,7 @@ This library is in early development, with a basic but powerful API. The API may
 The _Hello World_ example -- print something using JavaScript -- is one line, as it should be:
 ```rust
 fn main() {
-    js_sandbox::eval_json("console.log('Hello Rust from JS')").expect("JS runs");
+	js_sandbox::eval_json("console.log('Hello Rust from JS')").expect("JS runs");
 }
 ```
 
@@ -36,13 +36,13 @@ A very basic application calls a JavaScript function `sub()` from Rust. It passe
 use js_sandbox::{Script, AnyError};
 
 fn main() -> Result<(), AnyError> {
-    let js_code = "function sub(a, b) { return a - b; }";
-    let mut script = Script::from_string(js_code)?;
+	let js_code = "function sub(a, b) { return a - b; }";
+	let mut script = Script::from_string(js_code)?;
 
-    let result: i32 = script.call("sub", (7, 5))?;
+	let result: i32 = script.call("sub", (7, 5))?;
 
-    assert_eq!(result, 2);
-    Ok(())
+	assert_eq!(result, 2);
+	Ok(())
 }
 ```
 
@@ -54,23 +54,23 @@ use serde::Serialize;
 
 #[derive(Serialize)]
 struct Person {
-    name: String,
-    age: u8,
+	name: String,
+	age: u8,
 }
 
 fn main() -> Result<(), AnyError> {
-    let src = r#"
+	let src = r#"
         function toString(person) {
             return "A person named " + person.name + " of age " + person.age;
         }"#;
 
-    let mut script = Script::from_string(src)?;
+	let mut script = Script::from_string(src)?;
 
-    let person = Person { name: "Roger".to_string(), age: 42 };
-    let result: String = script.call("toString", (person,))?;
+	let person = Person { name: "Roger".to_string(), age: 42 };
+	let result: String = script.call("toString", (person,))?;
 
-    assert_eq!(result, "A person named Roger of age 42");
-    Ok(())
+	assert_eq!(result, "A person named Roger of age 42");
+	Ok(())
 }
 ```
 
@@ -85,14 +85,14 @@ If you want to statically embed UTF-8 encoded files in the Rust binary, you can 
 use js_sandbox::Script;
 
 fn main() {
-    // (1) at runtime:
-    let mut script = Script::from_file("script.js").expect("load + init succeeds");
+	// (1) at runtime:
+	let mut script = Script::from_file("script.js").expect("load + init succeeds");
 
-    // (2) at compile time:
-    let code: &'static str = include_str!("script.js");
-    let mut script = Script::from_string(code).expect("init succeeds");
+	// (2) at compile time:
+	let code: &'static str = include_str!("script.js");
+	let mut script = Script::from_string(code).expect("init succeeds");
 
-    // use script as usual
+	// use script as usual
 }
 ```
 
@@ -105,19 +105,19 @@ This example appends a string in two calls, and then gets the result in a third 
 use js_sandbox::{Script, AnyError};
 
 fn main() -> Result<(), AnyError> {
-    let src = r#"
+	let src = r#"
         var total = '';
         function append(str) { total += str; }
         function get()       { return total; }"#;
 
-    let mut script = Script::from_string(src)?;
+	let mut script = Script::from_string(src)?;
 
-    let _: () = script.call("append", ("hello",))?;
-    let _: () = script.call("append", (" world",))?;
-    let result: String = script.call("get", ())?;
+	let _: () = script.call("append", ("hello",))?;
+	let _: () = script.call("append", (" world",))?;
+	let result: String = script.call("get", ())?;
 
-    assert_eq!(result, "hello world");
-    Ok(())
+	assert_eq!(result, "hello world");
+	Ok(())
 }
 ```
 
@@ -130,19 +130,19 @@ a timeout, after which JavaScript execution is aborted.
 use js_sandbox::{Script, JsError};
 
 fn main() -> Result<(), JsError> {
-    use std::time::Duration;
-    let js_code = "function run_forever() { for(;;) {} }";
-    let mut script = Script::from_string(js_code)?
-        .with_timeout(Duration::from_millis(1000));
+	use std::time::Duration;
+	let js_code = "function run_forever() { for(;;) {} }";
+	let mut script = Script::from_string(js_code)?
+		.with_timeout(Duration::from_millis(1000));
 
-    let result: Result<String, JsError> = script.call("run_forever", ());
+	let result: Result<String, JsError> = script.call("run_forever", ());
 
-    assert_eq!(
-        result.unwrap_err().to_string(),
-        "Uncaught Error: execution terminated".to_string()
-    );
+	assert_eq!(
+		result.unwrap_err().to_string(),
+		"Uncaught Error: execution terminated".to_string()
+	);
 
-    Ok(())
+	Ok(())
 }
 ```
 

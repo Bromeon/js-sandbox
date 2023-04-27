@@ -8,7 +8,10 @@ use crate::AnyError;
 /// Represents an error ocurring during script execution
 #[derive(Debug)]
 pub enum JsError {
+	/// JSON errors stemming from arguments or return values
 	Json(serde_json::Error),
+
+	/// Runtime errors occuring within a JS script
 	Runtime(AnyError),
 }
 
