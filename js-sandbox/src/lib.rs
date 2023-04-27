@@ -150,6 +150,7 @@
 //!
 //! [Deno]: https://deno.land
 //! [serde_json]: https://docs.serde.rs/serde_json
+#![warn(missing_docs)]
 
 pub use call_args::CallArgs;
 pub use js_sandbox_macros::js_api;
@@ -170,6 +171,7 @@ pub use js_error::JsError;
 // use through deno_core, to make sure same version of anyhow crate is used
 pub type AnyError = deno_core::error::AnyError;
 
+/// Wrapper type representing a result that can result in a JS runtime error
 pub type JsResult<T> = Result<T, JsError>;
 
 mod call_args;

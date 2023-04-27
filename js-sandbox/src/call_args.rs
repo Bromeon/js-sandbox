@@ -13,6 +13,7 @@ mod private {
 /// This is currently only implemented for tuples of size 0..=5, i.e. JS functions with 0 to 5 arguments.
 /// Use structs or arrays inside a one-element tuple if you need more flexibility.
 pub trait CallArgs: private::Sealed {
+	/// Convert the arguments into a JSON string
 	fn into_arg_string(self) -> Result<String, AnyError>;
 }
 
