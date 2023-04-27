@@ -3,16 +3,16 @@
 use crate::AnyError;
 use serde::Serialize;
 
-/// Method sealing token
+/// Sealing token
 mod private {
-    pub trait Sealed {}
+	pub trait Sealed {}
 }
 
 /// Trait that is implemented for types that can be passed as argument to `Script::call()`.
 ///
 /// This is currently only implemented for tuples of size 0..=5, i.e. JS functions with 0 to 5 arguments.
 /// Use structs or arrays inside a one-element tuple if you need more flexibility.
-pub trait CallArgs : private::Sealed {
+pub trait CallArgs: private::Sealed {
 	fn into_arg_string(self) -> Result<String, AnyError>;
 }
 
@@ -27,7 +27,7 @@ macro_rules! impl_call_args {
 	($($param:ident),+) => {
 		#[allow(non_snake_case)]
 		impl<$($param),+> private::Sealed for ($($param),+,) {}
-		
+
 		#[allow(non_snake_case)] // use generic params as variable names
 		impl<$($param),+> CallArgs for ($($param),+,)
 			where $($param : Serialize),+
