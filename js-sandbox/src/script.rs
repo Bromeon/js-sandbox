@@ -10,7 +10,6 @@ use serde::de::DeserializeOwned;
 
 use crate::{AnyError, CallArgs, JsError, JsValue};
 
-/// Trait denoting a JS API
 pub trait JsApi<'a> {
 	/// Generate an API from a script
 	fn from_script(script: &'a mut Script) -> Self
@@ -103,7 +102,6 @@ impl Script {
 		Ok(result)
 	}
 
-	/// Bind this script to an API
 	pub fn bind_api<'a, A>(&'a mut self) -> A
 	where
 		A: JsApi<'a>,

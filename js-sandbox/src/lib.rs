@@ -150,7 +150,6 @@
 //!
 //! [Deno]: https://deno.land
 //! [serde_json]: https://docs.serde.rs/serde_json
-#![warn(missing_docs)]
 
 pub use call_args::CallArgs;
 pub use js_sandbox_macros::js_api;
