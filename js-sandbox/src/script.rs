@@ -8,10 +8,10 @@ use std::{thread, time::Duration};
 use deno_core::{op, Extension, JsRuntime, OpState, ZeroCopyBuf};
 use serde::de::DeserializeOwned;
 
-use crate::call_args::CallArgs;
-use crate::{AnyError, JsValue};
+use crate::{AnyError, CallArgs, JsError, JsValue};
 
 pub trait JsApi<'a> {
+	/// Generate an API from a script
 	fn from_script(script: &'a mut Script) -> Self
 	where
 		Self: Sized;
@@ -36,7 +36,7 @@ impl Script {
 	/// Initialize a script with the given JavaScript source code.
 	///
 	/// Returns a new object on success, and an error in case of syntax or initialization error with the code.
-	pub fn from_string(js_code: &str) -> Result<Self, AnyError> {
+	pub fn from_string(js_code: &str) -> Result<Self, JsError> {
 		// console.log() is not available by default -- add the most basic version with single argument (and no warn/info/... variants)
 		let all_code =
 			"const console = { log: function(expr) { Deno.core.print(expr + '\\n', false); } };"
@@ -51,7 +51,7 @@ impl Script {
 	/// At the moment, a script is limited to a single file, and you will need to do bundling yourself (e.g. with `esbuild`).
 	///
 	/// Returns a new object on success. Fails if the file cannot be opened or in case of syntax or initialization error with the code.
-	pub fn from_file(file: impl AsRef<Path>) -> Result<Self, AnyError> {
+	pub fn from_file(file: impl AsRef<Path>) -> Result<Self, JsError> {
 		// let filename = file
 		// 	.as_ref()
 		// 	.file_name()
@@ -61,7 +61,7 @@ impl Script {
 
 		match std::fs::read_to_string(file) {
 			Ok(js_code) => Self::create_script(js_code),
-			Err(e) => Err(AnyError::from(e)),
+			Err(e) => Err(JsError::Runtime(AnyError::from(e))),
 		}
 	}
 
@@ -90,7 +90,7 @@ impl Script {
 	/// `args_tuple` needs to be a tuple.
 	///
 	/// Each tuple element is converted to JSON (using serde_json) and passed as a distinct argument to the JS function.
-	pub fn call<A, R>(&mut self, fn_name: &str, args_tuple: A) -> Result<R, AnyError>
+	pub fn call<A, R>(&mut self, fn_name: &str, args_tuple: A) -> Result<R, JsError>
 	where
 		A: CallArgs,
 		R: DeserializeOwned,
@@ -109,11 +109,11 @@ impl Script {
 		A::from_script(self)
 	}
 
-	pub(crate) fn call_json(&mut self, fn_name: &str, args: &JsValue) -> Result<JsValue, AnyError> {
+	pub(crate) fn call_json(&mut self, fn_name: &str, args: &JsValue) -> Result<JsValue, JsError> {
 		self.call_impl(fn_name, args.to_string())
 	}
 
-	fn call_impl(&mut self, fn_name: &str, json_args: String) -> Result<JsValue, AnyError> {
+	fn call_impl(&mut self, fn_name: &str, json_args: String) -> Result<JsValue, JsError> {
 		// Note: ops() is required to initialize internal state
 		// Wrap everything in scoped block
 
@@ -163,7 +163,7 @@ impl Script {
 		Ok(extracted.json_value)
 	}
 
-	fn create_script(js_code: String) -> Result<Self, AnyError> {
+	fn create_script(js_code: String) -> Result<Self, JsError> {
 		let ext = Extension::builder("script")
 			.ops(vec![(op_return::decl())])
 			.build();

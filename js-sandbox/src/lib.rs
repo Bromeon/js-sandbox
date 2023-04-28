@@ -129,15 +129,15 @@
 //! a timeout, after which JavaScript execution is aborted.
 //!
 //! ```rust
-//! use js_sandbox::{Script, AnyError};
+//! use js_sandbox::{Script, JsError};
 //!
-//! fn main() -> Result<(), AnyError> {
+//! fn main() -> Result<(), JsError> {
 //! 	use std::time::Duration;
 //! 	let js_code = "function run_forever() { for(;;) {} }";
 //! 	let mut script = Script::from_string(js_code)?
 //! 		.with_timeout(Duration::from_millis(1000));
 //!
-//! 	let result: Result<String, AnyError> = script.call("run_forever", ());
+//! 	let result: Result<String, JsError> = script.call("run_forever", ());
 //!
 //! 	assert_eq!(
 //! 		result.unwrap_err().to_string(),
@@ -151,6 +151,7 @@
 //! [Deno]: https://deno.land
 //! [serde_json]: https://docs.serde.rs/serde_json
 
+pub use call_args::CallArgs;
 pub use js_sandbox_macros::js_api;
 pub use script::*;
 pub use util::eval_json;
@@ -160,14 +161,19 @@ pub use util::eval_json;
 /// Currently aliased as serde_json's Value type.
 pub type JsValue = serde_json::Value;
 
+/// Error occuring during script execution
+pub use js_error::JsError;
+
 /// Polymorphic error type able to represent different error domains.
 ///
 /// Currently reusing [anyhow::Error](../anyhow/enum.Error.html), this type may change slightly in the future depending on js-sandbox's needs.
 // use through deno_core, to make sure same version of anyhow crate is used
 pub type AnyError = deno_core::error::AnyError;
 
-pub type JsResult<T> = Result<T, AnyError>;
+/// Wrapper type representing a result that can result in a JS runtime error
+pub type JsResult<T> = Result<T, JsError>;
 
 mod call_args;
+mod js_error;
 mod script;
 mod util;

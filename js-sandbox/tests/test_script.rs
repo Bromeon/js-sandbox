@@ -7,7 +7,7 @@ use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
 
-use js_sandbox::{AnyError, Script};
+use js_sandbox::{AnyError, JsError, Script};
 use util::expect_error;
 
 mod util;
@@ -195,7 +195,7 @@ fn call_error_inexistent_function() {
 	let mut script = Script::from_string(src).expect("Initialization succeeds");
 
 	let args = 7;
-	let result: Result<i32, AnyError> = script.call("tripel", (args,));
+	let result: Result<i32, JsError> = script.call("tripel", (args,));
 
 	expect_error(result, "Inexistent function");
 }
@@ -206,7 +206,7 @@ fn call_error_exception() {
 	let mut script = Script::from_string(src).expect("Initialization succeeds");
 
 	let args = 7;
-	let result: Result<i32, AnyError> = script.call("triple", (args,));
+	let result: Result<i32, JsError> = script.call("triple", (args,));
 
 	expect_error(result, "Runtime exception");
 }
@@ -222,7 +222,7 @@ fn call_error_timeout() {
 		.with_timeout(timeout);
 
 	let start = Instant::now();
-	let result: Result<String, AnyError> = script.call("run_forever", ());
+	let result: Result<String, JsError> = script.call("run_forever", ());
 	let duration = start.elapsed();
 
 	expect_error(result, "Timed out");
