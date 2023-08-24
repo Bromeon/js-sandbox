@@ -5,7 +5,7 @@ use std::path::Path;
 use std::rc::Rc;
 use std::{thread, time::Duration};
 
-use deno_core::{op, Extension, JsRuntime, OpState, ZeroCopyBuf};
+use deno_core::{op, Extension, FastString, JsBuffer, JsRuntime, Op, OpState};
 use serde::de::DeserializeOwned;
 
 use crate::{AnyError, CallArgs, JsError, JsValue};
@@ -129,7 +129,8 @@ impl Script {
 
 				Deno.core.ops.op_return(__rust_result);
 			}})()"
-		);
+		)
+		.into();
 
 		if let Some(timeout) = self.timeout {
 			let handle = self.runtime.v8_isolate().thread_safe_handle();
@@ -163,10 +164,14 @@ impl Script {
 		Ok(extracted.json_value)
 	}
 
-	fn create_script(js_code: String) -> Result<Self, JsError> {
-		let ext = Extension::builder("script")
-			.ops(vec![(op_return::decl())])
-			.build();
+	fn create_script<S>(js_code: S) -> Result<Self, JsError>
+	where
+		S: Into<FastString>,
+	{
+		let ext = Extension {
+			ops: Cow::Owned(vec![op_return::DECL]),
+			..Default::default()
+		};
 
 		let mut runtime = JsRuntime::new(deno_core::RuntimeOptions {
 			module_loader: Some(Rc::new(deno_core::FsModuleLoader)),
@@ -175,7 +180,7 @@ impl Script {
 		});
 
 		// We cannot provide a dynamic filename because execute_script() requires a &'static str
-		runtime.execute_script(Self::DEFAULT_FILENAME, js_code)?;
+		runtime.execute_script(Self::DEFAULT_FILENAME, js_code.into())?;
 
 		Ok(Script {
 			runtime,
@@ -201,7 +206,7 @@ impl deno_core::Resource for ResultResource {
 fn op_return(
 	state: &mut OpState,
 	args: JsValue,
-	_buf: Option<ZeroCopyBuf>,
+	_buf: Option<JsBuffer>,
 ) -> Result<JsValue, deno_core::error::AnyError> {
 	let entry = ResultResource { json_value: args };
 	let resource_table = &mut state.resource_table;
