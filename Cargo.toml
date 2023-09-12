@@ -1,6 +1,7 @@
 # Copyright (c) 2020-2023 js-sandbox contributors. Zlib license.
 
 [workspace]
+resolver = "2"
 members = [
     "js-sandbox",
     "js-sandbox-macros",
