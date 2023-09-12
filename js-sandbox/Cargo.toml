@@ -2,17 +2,17 @@
 
 [package]
 name = "js-sandbox"
-version = "0.2.0-rc.1"
+version = "0.2.0-rc.2"
 description = "Execute JavaScript code from Rust in a secure sandbox, and transport data to/from JS plug-ins."
 repository = "https://github.com/Bromeon/js-sandbox"
-documentation = "https://docs.rs/js-sandbox/0.2.0-rc.1"
+documentation = "https://docs.rs/js-sandbox/0.2.0-rc.2"
 authors = ["Jan Haller <bromeon@gmail.com>"]
 license = "Zlib"
 edition = "2021"
 readme = "../ReadMe.md"
 
 [dependencies]
-js-sandbox-macros = { path = "../js-sandbox-macros", version = "=0.2.0-rc.1" }
+js-sandbox-macros = { path = "../js-sandbox-macros", version = "=0.2.0-rc.2" }
 deno_core = "0.209.0"
 serde_json = "1.0.106"
 serde = { version = "1.0.188", features = ["derive"] }
