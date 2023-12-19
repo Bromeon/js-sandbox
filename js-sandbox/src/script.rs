@@ -1,11 +1,14 @@
 // Copyright (c) 2020-2023 js-sandbox contributors. Zlib license.
 
 use std::borrow::Cow;
+use std::fmt::{Debug, Formatter};
 use std::path::Path;
 use std::rc::Rc;
 use std::{thread, time::Duration};
 
-use deno_core::{op, Extension, FastString, JsBuffer, JsRuntime, Op, OpState};
+use deno_core::{
+	op2, Extension, FastString, JsBuffer, JsRuntime, Op, OpState, PollEventLoopOptions,
+};
 use serde::de::DeserializeOwned;
 
 use crate::{AnyError, CallArgs, JsError, JsValue};
@@ -27,6 +30,16 @@ pub struct Script {
 	timeout: Option<Duration>,
 }
 
+impl Debug for Script {
+	fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+		f.debug_struct("Script")
+			.field("runtime", &"...")
+			.field("last_rid", &self.last_rid)
+			.field("timeout", &self.timeout)
+			.finish()
+	}
+}
+
 impl Script {
 	const DEFAULT_FILENAME: &'static str = "sandboxed.js";
 
@@ -42,6 +55,7 @@ impl Script {
 			"const console = { log: function(expr) { Deno.core.print(expr + '\\n', false); } };"
 				.to_string() + js_code;
 
+        println!("from_string: {}", all_code);
 		Self::create_script(all_code)
 	}
 
@@ -147,21 +161,38 @@ impl Script {
 		// TODO use strongly typed JsError here (downcast)
 		self.runtime
 			.execute_script(Self::DEFAULT_FILENAME, js_code)?;
-		deno_core::futures::executor::block_on(self.runtime.run_event_loop(false))?;
+		deno_core::futures::executor::block_on(self.runtime.run_event_loop(
+			PollEventLoopOptions {
+				wait_for_inspector: true,
+				pump_v8_message_loop: true,
+			},
+		))?;
 
 		let state_rc = self.runtime.op_state();
 		let mut state = state_rc.borrow_mut();
 		let table = &mut state.resource_table;
 
 		// Get resource, and free slot (no longer needed)
-		let entry: Rc<ResultResource> = table
-			.take(self.last_rid)
-			.expect("Resource entry must be present");
-		let extracted =
-			Rc::try_unwrap(entry).expect("Rc must hold single strong ref to resource entry");
-		self.last_rid += 1;
+		let entry: Result<Rc<ResultResource>, deno_core::anyhow::Error> = table.take(self.last_rid);
 
-		Ok(extracted.json_value)
+		match entry {
+			Ok(entry) => {
+				let extracted = Rc::try_unwrap(entry);
+
+				if extracted.is_err() {
+					return Err(JsError::Runtime(AnyError::msg(
+						"Failed to unwrap resource entry",
+					)));
+				}
+
+				let extracted = extracted.unwrap();
+
+				self.last_rid += 1;
+
+				Ok(extracted.json_value)
+			}
+			Err(e) => Err(JsError::Runtime(AnyError::from(e))),
+		}
 	}
 
 	fn create_script<S>(js_code: S) -> Result<Self, JsError>
@@ -202,11 +233,12 @@ impl deno_core::Resource for ResultResource {
 	}
 }
 
-#[op]
+#[op2]
+#[serde]
 fn op_return(
 	state: &mut OpState,
-	args: JsValue,
-	_buf: Option<JsBuffer>,
+	#[serde] args: JsValue,
+	#[buffer] _buf: Option<JsBuffer>,
 ) -> Result<JsValue, deno_core::error::AnyError> {
 	let entry = ResultResource { json_value: args };
 	let resource_table = &mut state.resource_table;

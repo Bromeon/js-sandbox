@@ -172,7 +172,13 @@ fn parse_return_type(tok: &syn::ReturnType) -> syn::Result<ReturnType> {
 		}
 		syn::ReturnType::Type(_, ty) => {
 			if let syn::Type::Path(path) = ty.as_ref() {
-				let seg = path.path.segments.first().unwrap();
+				let seg = path.path.segments.first();
+
+				if seg.is_none() {
+					syntax_error!(tok, "unsupported return type; expected T or JsResult<T>, where T: Deserializable")
+				}
+
+				let seg = seg.unwrap();
 
 				if seg.ident == "JsResult" || seg.ident == "js_sandbox::JsResult" {
 					// -> JsResult<T>
