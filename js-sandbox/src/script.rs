@@ -1,14 +1,13 @@
 // Copyright (c) 2020-2023 js-sandbox contributors. Zlib license.
 
 use std::borrow::Cow;
+use std::collections::BTreeSet;
 use std::fmt::{Debug, Formatter};
 use std::path::Path;
 use std::rc::Rc;
 use std::{thread, time::Duration};
 
-use deno_core::{
-	op2, Extension, FastString, JsBuffer, JsRuntime, Op, OpState, PollEventLoopOptions,
-};
+use deno_core::{op2, Extension, FastString, JsBuffer, JsRuntime, Op, OpState};
 use serde::de::DeserializeOwned;
 
 use crate::{AnyError, CallArgs, JsError, JsValue};
@@ -28,6 +27,7 @@ pub struct Script {
 	runtime: JsRuntime,
 	last_rid: u32,
 	timeout: Option<Duration>,
+	added_namespaces: BTreeSet<String>,
 }
 
 impl Debug for Script {
@@ -55,7 +55,6 @@ impl Script {
 			"const console = { log: function(expr) { Deno.core.print(expr + '\\n', false); } };"
 				.to_string() + js_code;
 
-        println!("from_string: {}", all_code);
 		Self::create_script(all_code)
 	}
 
@@ -66,17 +65,61 @@ impl Script {
 	///
 	/// Returns a new object on success. Fails if the file cannot be opened or in case of syntax or initialization error with the code.
 	pub fn from_file(file: impl AsRef<Path>) -> Result<Self, JsError> {
-		// let filename = file
-		// 	.as_ref()
-		// 	.file_name()
-		// 	.and_then(|s| s.to_str())
-		// 	.unwrap_or(Self::DEFAULT_FILENAME)
-		// 	.to_owned();
-
 		match std::fs::read_to_string(file) {
 			Ok(js_code) => Self::create_script(js_code),
 			Err(e) => Err(JsError::Runtime(AnyError::from(e))),
 		}
+	}
+
+	pub fn new() -> Self {
+		let ext = Extension {
+			ops: Cow::Owned(vec![op_return::DECL]),
+			..Default::default()
+		};
+
+		let runtime = JsRuntime::new(deno_core::RuntimeOptions {
+			module_loader: Some(Rc::new(deno_core::FsModuleLoader)),
+			extensions: vec![ext],
+			..Default::default()
+		});
+
+		Script {
+			runtime,
+			last_rid: 0,
+			timeout: None,
+			added_namespaces: Default::default(),
+		}
+	}
+
+	pub fn add_script(
+		&mut self,
+		namespace: &str,
+		fn_name: &str,
+		js_code: &str,
+	) -> Result<(), JsError> {
+		if self.added_namespaces.contains(namespace) {
+			return Ok(());
+		}
+
+		let js_code = format!(
+			"
+			var {namespace} = (function() {{
+				{js_code}
+
+				return {{
+					{fn_name}
+				}}
+			}})();
+		"
+		);
+
+		// We cannot provide a dynamic filename because execute_script() requires a &'static str
+		self.runtime
+			.execute_script(Self::DEFAULT_FILENAME, js_code.into())?;
+
+		self.added_namespaces.insert(namespace.to_string());
+
+		Ok(())
 	}
 
 	/// Equips this script with a timeout, meaning that any function call is aborted after the specified duration.
@@ -110,7 +153,26 @@ impl Script {
 		R: DeserializeOwned,
 	{
 		let json_args = args_tuple.into_arg_string()?;
-		let json_result = self.call_impl(fn_name, json_args)?;
+		let json_result = self.call_impl(None, fn_name, json_args)?;
+		let result: R = serde_json::from_value(json_result)?;
+
+		Ok(result)
+	}
+
+	pub async fn call_async<A, R>(
+		&mut self,
+		namespace: &str,
+		fn_name: &str,
+		args_tuple: A,
+	) -> Result<R, JsError>
+	where
+		A: CallArgs,
+		R: DeserializeOwned,
+	{
+		let json_args = args_tuple.into_arg_string()?;
+		let json_result = self
+			.call_impl_async(Some(namespace), fn_name, json_args)
+			.await?;
 		let result: R = serde_json::from_value(json_result)?;
 
 		Ok(result)
@@ -124,12 +186,32 @@ impl Script {
 	}
 
 	pub(crate) fn call_json(&mut self, fn_name: &str, args: &JsValue) -> Result<JsValue, JsError> {
-		self.call_impl(fn_name, args.to_string())
+		self.call_impl(None, fn_name, args.to_string())
 	}
 
-	fn call_impl(&mut self, fn_name: &str, json_args: String) -> Result<JsValue, JsError> {
+	fn call_impl(
+		&mut self,
+		namespace: Option<&str>,
+		fn_name: &str,
+		json_args: String,
+	) -> Result<JsValue, JsError> {
+		deno_core::futures::executor::block_on(self.call_impl_async(namespace, fn_name, json_args))
+	}
+
+	async fn call_impl_async(
+		&mut self,
+		namespace: Option<&str>,
+		fn_name: &str,
+		json_args: String,
+	) -> Result<JsValue, JsError> {
 		// Note: ops() is required to initialize internal state
 		// Wrap everything in scoped block
+
+		let fn_name = if let Some(namespace) = namespace {
+			Cow::Owned(format!("{namespace}.{fn_name}"))
+		} else {
+			Cow::Borrowed(fn_name)
+		};
 
 		// 'undefined' will cause JSON serialization error, so it needs to be treated as null
 		let js_code = format!(
@@ -161,12 +243,8 @@ impl Script {
 		// TODO use strongly typed JsError here (downcast)
 		self.runtime
 			.execute_script(Self::DEFAULT_FILENAME, js_code)?;
-		deno_core::futures::executor::block_on(self.runtime.run_event_loop(
-			PollEventLoopOptions {
-				wait_for_inspector: true,
-				pump_v8_message_loop: true,
-			},
-		))?;
+
+		self.runtime.run_event_loop(Default::default()).await?;
 
 		let state_rc = self.runtime.op_state();
 		let mut state = state_rc.borrow_mut();
@@ -199,25 +277,11 @@ impl Script {
 	where
 		S: Into<FastString>,
 	{
-		let ext = Extension {
-			ops: Cow::Owned(vec![op_return::DECL]),
-			..Default::default()
-		};
-
-		let mut runtime = JsRuntime::new(deno_core::RuntimeOptions {
-			module_loader: Some(Rc::new(deno_core::FsModuleLoader)),
-			extensions: vec![ext],
-			..Default::default()
-		});
-
-		// We cannot provide a dynamic filename because execute_script() requires a &'static str
-		runtime.execute_script(Self::DEFAULT_FILENAME, js_code.into())?;
-
-		Ok(Script {
-			runtime,
-			last_rid: 0,
-			timeout: None,
-		})
+		let mut script = Self::new();
+		script
+			.runtime
+			.execute_script(Self::DEFAULT_FILENAME, js_code.into())?;
+		Ok(script)
 	}
 }
 
