@@ -1,14 +1,17 @@
 // Copyright (c) 2020-2023 js-sandbox contributors. Zlib license.
 
 use std::borrow::Cow;
-use std::collections::BTreeSet;
+use std::collections::BTreeMap;
 use std::fmt::{Debug, Formatter};
 use std::path::Path;
 use std::rc::Rc;
 use std::{thread, time::Duration};
 
-use deno_core::{op2, Extension, FastString, JsBuffer, JsRuntime, Op, OpState};
+use deno_core::anyhow::Context;
+use deno_core::v8::{Global, Value};
+use deno_core::{op2, serde_v8, v8, Extension, FastString, JsBuffer, JsRuntime, Op, OpState};
 use serde::de::DeserializeOwned;
+use serde::Serialize;
 
 use crate::{AnyError, CallArgs, JsError, JsValue};
 
@@ -27,7 +30,7 @@ pub struct Script {
 	runtime: JsRuntime,
 	last_rid: u32,
 	timeout: Option<Duration>,
-	added_namespaces: BTreeSet<String>,
+	added_namespaces: BTreeMap<String, Global<Value>>,
 }
 
 impl Debug for Script {
@@ -97,7 +100,7 @@ impl Script {
 		fn_name: &str,
 		js_code: &str,
 	) -> Result<(), JsError> {
-		if self.added_namespaces.contains(namespace) {
+		if self.added_namespaces.contains_key(namespace) {
 			return Ok(());
 		}
 
@@ -110,14 +113,16 @@ impl Script {
 					{fn_name}
 				}}
 			}})();
+			{namespace}.{fn_name}
 		"
 		);
 
 		// We cannot provide a dynamic filename because execute_script() requires a &'static str
-		self.runtime
+		let global = self
+			.runtime
 			.execute_script(Self::DEFAULT_FILENAME, js_code.into())?;
 
-		self.added_namespaces.insert(namespace.to_string());
+		self.added_namespaces.insert(namespace.to_string(), global);
 
 		Ok(())
 	}
@@ -159,21 +164,30 @@ impl Script {
 		Ok(result)
 	}
 
-	pub async fn call_async<A, R>(
-		&mut self,
-		namespace: &str,
-		fn_name: &str,
-		args_tuple: A,
-	) -> Result<R, JsError>
+	pub fn call_namespace<A, R>(&mut self, namespace: &str, arg: A) -> Result<R, JsError>
 	where
-		A: CallArgs,
+		A: Serialize,
 		R: DeserializeOwned,
 	{
-		let json_args = args_tuple.into_arg_string()?;
-		let json_result = self
-			.call_impl_async(Some(namespace), fn_name, json_args)
-			.await?;
-		let result: R = serde_json::from_value(json_result)?;
+		deno_core::futures::executor::block_on(self.runtime.run_event_loop(Default::default()))?;
+
+		let Some(global) = self.added_namespaces.get(namespace) else {
+			return Err(JsError::Runtime(AnyError::msg(
+				"Failed to get namespace function",
+			)));
+		};
+		let scope = &mut self.runtime.handle_scope();
+		let scope = &mut v8::HandleScope::new(scope);
+		let input = serde_v8::to_v8(scope, arg).with_context(|| "Could not serialize arg")?;
+		let local = v8::Local::new(scope, global);
+		let func = v8::Local::<v8::Function>::try_from(local)
+			.with_context(|| "Could not create function out of local")?;
+		let Some(func_res) = func.call(scope, local, &[input]) else {
+			return Err(JsError::Runtime(AnyError::msg("Failed to call func")));
+		};
+		let deserialized_value = serde_v8::from_v8::<serde_json::Value>(scope, func_res)
+			.with_context(|| "Could not serialize func res")?;
+		let result: R = serde_json::from_value(deserialized_value)?;
 
 		Ok(result)
 	}
