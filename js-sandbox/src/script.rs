@@ -11,7 +11,7 @@ use deno_core::anyhow::Context;
 use deno_core::v8::{Global, Value};
 use deno_core::{op2, serde_v8, v8, Extension, FastString, JsBuffer, JsRuntime, Op, OpState};
 use serde::de::DeserializeOwned;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{AnyError, CallArgs, JsError, JsValue};
 
@@ -41,6 +41,13 @@ impl Debug for Script {
 			.field("timeout", &self.timeout)
 			.finish()
 	}
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(untagged)]
+enum CallResult<R> {
+	Error { error: String },
+	Result(R),
 }
 
 impl Script {
@@ -110,7 +117,13 @@ impl Script {
 				{js_code}
 
 				return {{
-					{fn_name}
+					{fn_name}: function (input) {{
+						try {{
+							return {fn_name}(input)
+						}} catch (e) {{
+							return {{ error: `${{e}}` }}
+						}}
+					}}
 				}}
 			}})();
 			{namespace}.{fn_name}
@@ -187,9 +200,11 @@ impl Script {
 		};
 		let deserialized_value = serde_v8::from_v8::<serde_json::Value>(scope, func_res)
 			.with_context(|| "Could not serialize func res")?;
-		let result: R = serde_json::from_value(deserialized_value)?;
-
-		Ok(result)
+		let result: CallResult<R> = serde_json::from_value(deserialized_value)?;
+		match result {
+			CallResult::Error { error } => Err(JsError::Runtime(AnyError::msg(error))),
+			CallResult::Result(r) => Ok(r),
+		}
 	}
 
 	pub fn bind_api<'a, A>(&'a mut self) -> A
