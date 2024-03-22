@@ -7,7 +7,7 @@ use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
 
-use js_sandbox::{AnyError, JsError, Script};
+use js_sandbox_ios::{AnyError, JsError, Script};
 use util::expect_error;
 
 mod util;

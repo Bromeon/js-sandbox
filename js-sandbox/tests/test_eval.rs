@@ -1,13 +1,13 @@
 // Copyright (c) 2020-2023 js-sandbox contributors. Zlib license.
 
-use js_sandbox::JsValue;
+use js_sandbox_ios::JsValue;
 use util::expect_error;
 
 mod util;
 
 #[test]
 fn console_log() {
-	let result: JsValue = js_sandbox::eval_json("console.log(\"Hello World\")")
+	let result: JsValue = js_sandbox_ios::eval_json("console.log(\"Hello World\")")
 		.expect("Valid expression can be evaluated");
 
 	assert_eq!(result, JsValue::Null);
@@ -15,8 +15,8 @@ fn console_log() {
 
 #[test]
 fn expression() {
-	let result: JsValue =
-		js_sandbox::eval_json("({a: 43, b: 12}).b - 2").expect("Valid expression can be evaluated");
+	let result: JsValue = js_sandbox_ios::eval_json("({a: 43, b: 12}).b - 2")
+		.expect("Valid expression can be evaluated");
 
 	let exp_result = JsValue::from(10);
 
@@ -25,7 +25,7 @@ fn expression() {
 
 #[test]
 fn syntax_error() {
-	let result_opt = js_sandbox::eval_json("({a: 43, b: 12})..b - 2");
+	let result_opt = js_sandbox_ios::eval_json("({a: 43, b: 12})..b - 2");
 
 	expect_error(result_opt, "Syntax error");
 }

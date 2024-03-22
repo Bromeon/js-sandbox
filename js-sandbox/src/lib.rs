@@ -25,7 +25,7 @@
 //! ```rust
 //! # #[allow(clippy::needless_doctest_main)]
 //! fn main() {
-//! 	js_sandbox::eval_json("console.log('Hello Rust from JS')").expect("JS runs");
+//! 	js_sandbox_ios::eval_json("console.log('Hello Rust from JS')").expect("JS runs");
 //! }
 //! ```
 //!
@@ -34,7 +34,7 @@
 //! A very basic application calls a JavaScript function `sub()` from Rust. It passes an argument and accepts a return value, both serialized via JSON:
 //!
 //! ```rust
-//! use js_sandbox::{Script, AnyError};
+//! use js_sandbox_ios::{Script, AnyError};
 //!
 //! fn main() -> Result<(), AnyError> {
 //! 	let js_code = "function sub(a, b) { return a - b; }";
@@ -50,7 +50,7 @@
 //! An example that serializes a JSON object (Rust -> JS) and formats a string (JS -> Rust):
 //!
 //! ```rust
-//! use js_sandbox::{Script, AnyError};
+//! use js_sandbox_ios::{Script, AnyError};
 //! use serde::Serialize;
 //!
 //! #[derive(Serialize)]
@@ -84,7 +84,7 @@
 //!
 //! ```rust,no_run
 //! # macro_rules! include_str { ( $($tt:tt)* ) => { "" } }
-//! use js_sandbox::Script;
+//! use js_sandbox_ios::Script;
 //!
 //! fn main() {
 //! 	// (1) at runtime:
@@ -104,7 +104,7 @@
 //! This example appends a string in two calls, and then gets the result in a third call:
 //!
 //! ```rust
-//! use js_sandbox::{Script, AnyError};
+//! use js_sandbox_ios::{Script, AnyError};
 //!
 //! fn main() -> Result<(), AnyError> {
 //! 	let src = r#"
@@ -129,7 +129,7 @@
 //! a timeout, after which JavaScript execution is aborted.
 //!
 //! ```rust
-//! use js_sandbox::{Script, JsError};
+//! use js_sandbox_ios::{Script, JsError};
 //!
 //! fn main() -> Result<(), JsError> {
 //! 	use std::time::Duration;

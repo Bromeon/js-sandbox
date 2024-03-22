@@ -38,7 +38,7 @@ fn generate_struct(item: &syn::ItemTrait) -> syn::Result<TokenStream2> {
 
 	Ok(quote! {
 		#visibility struct #name<'a> {
-			script: &'a mut js_sandbox::Script,
+			script: &'a mut js_sandbox_ios::Script,
 		}
 	})
 }
@@ -48,8 +48,8 @@ fn generate_marker_trait_impl(item: &syn::ItemTrait) -> syn::Result<TokenStream2
 	let visibility = &item.vis;
 
 	Ok(quote! {
-		impl<'a> js_sandbox::JsApi<'a> for #name<'a> {
-			#visibility fn from_script(script: &'a mut js_sandbox::Script) -> Self {
+		impl<'a> js_sandbox_ios::JsApi<'a> for #name<'a> {
+			#visibility fn from_script(script: &'a mut js_sandbox_ios::Script) -> Self {
 				Self { script }
 			}
 		}
@@ -155,7 +155,7 @@ fn generate_impl_methods(item: &syn::ItemTrait) -> syn::Result<TokenStream2> {
 					#(#args,),*
 				);
 
-				let result: js_sandbox::JsResult<#return_type> = self.script.call(#fn_name, args);
+				let result: js_sandbox_ios::JsResult<#return_type> = self.script.call(#fn_name, args);
 				#transform
 			}
 		});
@@ -180,7 +180,7 @@ fn parse_return_type(tok: &syn::ReturnType) -> syn::Result<ReturnType> {
 
 				let seg = seg.unwrap();
 
-				if seg.ident == "JsResult" || seg.ident == "js_sandbox::JsResult" {
+				if seg.ident == "JsResult" || seg.ident == "js_sandbox_ios::JsResult" {
 					// -> JsResult<T>
 					match &seg.arguments {
 						syn::PathArguments::None => {}

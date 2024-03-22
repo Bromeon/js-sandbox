@@ -1,6 +1,6 @@
 // Copyright (c) 2020-2023 js-sandbox contributors. Zlib license.
 
-use js_sandbox::{js_api, JsResult, Script};
+use js_sandbox_ios::{js_api, JsResult, Script};
 
 #[js_api]
 trait TripleApi {

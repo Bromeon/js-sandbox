@@ -22,9 +22,10 @@ This library is in early development, with a basic but powerful API. The API may
 ### Print from JavaScript
 
 The _Hello World_ example -- print something using JavaScript -- is one line, as it should be:
+
 ```rust
 fn main() {
-    js_sandbox::eval_json("console.log('Hello Rust from JS')").expect("JS runs");
+    js_sandbox_ios::eval_json("console.log('Hello Rust from JS')").expect("JS runs");
 }
 ```
 
@@ -33,7 +34,7 @@ fn main() {
 A very basic application calls a JavaScript function `sub()` from Rust. It passes an argument and accepts a return value, both serialized via JSON:
 
 ```rust
-use js_sandbox::{Script, AnyError};
+use js_sandbox_ios::{Script, AnyError};
 
 fn main() -> Result<(), AnyError> {
     let js_code = "function sub(a, b) { return a - b; }";
@@ -49,7 +50,7 @@ fn main() -> Result<(), AnyError> {
 An example that serializes a JSON object (Rust -> JS) and formats a string (JS -> Rust):
 
 ```rust
-use js_sandbox::{Script, AnyError};
+use js_sandbox_ios::{Script, AnyError};
 use serde::Serialize;
 
 #[derive(Serialize)]
@@ -82,7 +83,7 @@ If you want to statically embed UTF-8 encoded files in the Rust binary, you can 
 [`std::include_str`](https://doc.rust-lang.org/std/macro.include_str.html) macro.
 
 ```rust
-use js_sandbox::Script;
+use js_sandbox_ios::Script;
 
 fn main() {
     // (1) at runtime:
@@ -102,7 +103,7 @@ It is possible to initialize a stateful JS script, and then use functions to mod
 This example appends a string in two calls, and then gets the result in a third call:
 
 ```rust
-use js_sandbox::{Script, AnyError};
+use js_sandbox_ios::{Script, AnyError};
 
 fn main() -> Result<(), AnyError> {
     let src = r#"
@@ -127,7 +128,7 @@ The JS code may contain long- or forever-running loops that block Rust code. It 
 a timeout, after which JavaScript execution is aborted.
 
 ```rust
-use js_sandbox::{Script, JsError};
+use js_sandbox_ios::{Script, JsError};
 
 fn main() -> Result<(), JsError> {
     use std::time::Duration;

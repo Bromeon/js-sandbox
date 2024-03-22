@@ -1,6 +1,6 @@
 // Copyright (c) 2020-2023 js-sandbox contributors. Zlib license.
 
-use js_sandbox::JsError;
+use js_sandbox_ios::JsError;
 
 pub fn expect_error<T>(result: Result<T, JsError>, error_type: &str) {
 	let err = match result {
