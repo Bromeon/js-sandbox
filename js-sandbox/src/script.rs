@@ -200,10 +200,63 @@ impl Script {
 		};
 		let deserialized_value = serde_v8::from_v8::<serde_json::Value>(scope, func_res)
 			.with_context(|| "Could not serialize func res")?;
-		let result: CallResult<R> = serde_json::from_value(deserialized_value)?;
+		let sanitized_value = Self::sanitize_number(deserialized_value)?;
+		let result: CallResult<R> = serde_json::from_value(sanitized_value)?;
 		match result {
 			CallResult::Error { error } => Err(JsError::Runtime(AnyError::msg(error))),
 			CallResult::Result(r) => Ok(r),
+		}
+	}
+
+	fn sanitize_number(value: serde_json::Value) -> Result<serde_json::Value, JsError> {
+		match value {
+			serde_json::Value::Number(number) => {
+				if number.is_f64() {
+					let f = number.as_f64().ok_or_else(|| {
+						JsError::Runtime(AnyError::msg("Failed to convert number to f64"))
+					})?;
+
+					if f.fract() == 0.0 {
+						return Ok(serde_json::Value::Number(serde_json::Number::from(
+							f as i64,
+						)));
+					}
+
+					Ok(serde_json::Value::Number(
+						serde_json::Number::from_f64(f).ok_or_else(|| {
+							JsError::Runtime(AnyError::msg("Failed to convert f64 to number"))
+						})?,
+					))
+				} else if number.is_u64() {
+					Ok(serde_json::Value::Number(
+						number
+							.as_i64()
+							.ok_or_else(|| {
+								JsError::Runtime(AnyError::msg("Failed to convert number to i64"))
+							})?
+							.into(),
+					))
+				} else if number.is_i64() {
+					Ok(serde_json::Value::Number(number))
+				} else {
+					Err(JsError::Runtime(AnyError::msg("Failed to convert number")))
+				}
+			}
+			serde_json::Value::Object(map) => {
+				let mut new_map = serde_json::Map::new();
+				for (key, value) in map {
+					new_map.insert(key, Self::sanitize_number(value)?);
+				}
+				Ok(serde_json::Value::Object(new_map))
+			}
+			serde_json::Value::Array(vec) => {
+				let mut new_vec = Vec::new();
+				for value in vec {
+					new_vec.push(Self::sanitize_number(value)?);
+				}
+				Ok(serde_json::Value::Array(new_vec))
+			}
+			_ => Ok(value),
 		}
 	}
 

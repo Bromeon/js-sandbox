@@ -2,7 +2,7 @@
 
 [package]
 name = "js-sandbox-ios"
-version = "0.1.0"
+version = "0.1.1"
 description = "Execute JavaScript code from Rust in a secure sandbox, and transport data to/from JS plug-ins."
 repository = "https://github.com/Bromeon/js-sandbox"
 documentation = "https://docs.rs/js-sandbox/0.2.0-rc.1"
@@ -16,3 +16,4 @@ js-sandbox-macros = { path = "../js-sandbox-macros", version = "=0.2.0-rc.1" }
 deno_core = "0.238.0"
 serde_json = "1.0.106"
 serde = { version = "1.0.188", features = ["derive"] }
+tracing = "0.1.40"
