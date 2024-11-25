@@ -15,7 +15,8 @@
 //! The typical use case is a core Rust application that integrates with scripts from external users, for example a plugin system or a game that runs
 //! external mods.
 //!
-//! This library is in early development, with a basic but powerful API. The API may still evolve considerably.
+//! > [!TIP]
+//! > If you are looking for a more feature-rich integration, check out [rustyscript](https://github.com/rscarson/rustyscript)!
 //!
 //! # Examples
 //!
