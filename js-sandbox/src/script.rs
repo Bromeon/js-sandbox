@@ -1,14 +1,13 @@
 // Copyright (c) 2020-2023 js-sandbox contributors. Zlib license.
 
-use std::borrow::Cow;
 use std::path::Path;
 use std::rc::Rc;
 use std::{thread, time::Duration};
 
-use deno_core::{op, Extension, FastString, JsBuffer, JsRuntime, Op, OpState};
+use deno_core::{serde_v8, v8, FastString, JsRuntime};
 use serde::de::DeserializeOwned;
 
-use crate::{AnyError, CallArgs, JsError, JsValue};
+use crate::{CallArgs, JsError, JsValue};
 
 pub trait JsApi<'a> {
 	/// Generate an API from a script
@@ -23,7 +22,6 @@ pub trait JsApi<'a> {
 /// A typical usage pattern is to load a file with one or more JS function definitions, and then call those functions from Rust.
 pub struct Script {
 	runtime: JsRuntime,
-	last_rid: u32,
 	timeout: Option<Duration>,
 }
 
@@ -37,12 +35,7 @@ impl Script {
 	///
 	/// Returns a new object on success, and an error in case of syntax or initialization error with the code.
 	pub fn from_string(js_code: &str) -> Result<Self, JsError> {
-		// console.log() is not available by default -- add the most basic version with single argument (and no warn/info/... variants)
-		let all_code =
-			"const console = { log: function(expr) { Deno.core.print(expr + '\\n', false); } };"
-				.to_string() + js_code;
-
-		Self::create_script(all_code)
+		Self::create_script(js_code.to_string())
 	}
 
 	/// Initialize a script by loading it from a .js file.
@@ -52,16 +45,9 @@ impl Script {
 	///
 	/// Returns a new object on success. Fails if the file cannot be opened or in case of syntax or initialization error with the code.
 	pub fn from_file(file: impl AsRef<Path>) -> Result<Self, JsError> {
-		// let filename = file
-		// 	.as_ref()
-		// 	.file_name()
-		// 	.and_then(|s| s.to_str())
-		// 	.unwrap_or(Self::DEFAULT_FILENAME)
-		// 	.to_owned();
-
 		match std::fs::read_to_string(file) {
 			Ok(js_code) => Self::create_script(js_code),
-			Err(e) => Err(JsError::Runtime(AnyError::from(e))),
+			Err(e) => Err(JsError::from(e)),
 		}
 	}
 
@@ -114,23 +100,8 @@ impl Script {
 	}
 
 	fn call_impl(&mut self, fn_name: &str, json_args: String) -> Result<JsValue, JsError> {
-		// Note: ops() is required to initialize internal state
-		// Wrap everything in scoped block
-
-		// 'undefined' will cause JSON serialization error, so it needs to be treated as null
-		let js_code = format!(
-			"(async () => {{
-				let __rust_result = {fn_name}.constructor.name === 'AsyncFunction'
-					? await {fn_name}({json_args})
-					: {fn_name}({json_args});
-
-				if (typeof __rust_result === 'undefined')
-					__rust_result = null;
-
-				Deno.core.ops.op_return(__rust_result);
-			}})()"
-		)
-		.into();
+		// Wrap call in async IIFE so async + sync functions resolve uniformly via the event loop.
+		let js_code: FastString = format!("(async () => {fn_name}({json_args}))()").into();
 
 		if let Some(timeout) = self.timeout {
 			let handle = self.runtime.v8_isolate().thread_safe_handle();
@@ -141,41 +112,29 @@ impl Script {
 			});
 		}
 
-		// syncing ops is required cause they sometimes change while preparing the engine
-		// self.runtime.sync_ops_cache();
-
-		// TODO use strongly typed JsError here (downcast)
-		self.runtime
+		let promise = self
+			.runtime
 			.execute_script(Self::DEFAULT_FILENAME, js_code)?;
-		deno_core::futures::executor::block_on(self.runtime.run_event_loop(false))?;
 
-		let state_rc = self.runtime.op_state();
-		let mut state = state_rc.borrow_mut();
-		let table = &mut state.resource_table;
+		let resolved = deno_core::futures::executor::block_on(async {
+			let fut = self.runtime.resolve(promise);
+			self.runtime
+				.with_event_loop_promise(fut, deno_core::PollEventLoopOptions::default())
+				.await
+		})?;
 
-		// Get resource, and free slot (no longer needed)
-		let entry: Rc<ResultResource> = table
-			.take(self.last_rid)
-			.expect("Resource entry must be present");
-		let extracted =
-			Rc::try_unwrap(entry).expect("Rc must hold single strong ref to resource entry");
-		self.last_rid += 1;
-
-		Ok(extracted.json_value)
+		deno_core::scope!(scope, &mut self.runtime);
+		let local = v8::Local::new(scope, resolved);
+		let value: JsValue = serde_v8::from_v8(scope, local)?;
+		Ok(value)
 	}
 
 	fn create_script<S>(js_code: S) -> Result<Self, JsError>
 	where
 		S: Into<FastString>,
 	{
-		let ext = Extension {
-			ops: Cow::Owned(vec![op_return::DECL]),
-			..Default::default()
-		};
-
 		let mut runtime = JsRuntime::new(deno_core::RuntimeOptions {
 			module_loader: Some(Rc::new(deno_core::FsModuleLoader)),
-			extensions: vec![ext],
 			..Default::default()
 		});
 
@@ -184,32 +143,7 @@ impl Script {
 
 		Ok(Script {
 			runtime,
-			last_rid: 0,
 			timeout: None,
 		})
 	}
-}
-
-#[derive(Debug)]
-struct ResultResource {
-	json_value: JsValue,
-}
-
-// Type that is stored inside Deno's resource table
-impl deno_core::Resource for ResultResource {
-	fn name(&self) -> Cow<str> {
-		"__rust_Result".into()
-	}
-}
-
-#[op]
-fn op_return(
-	state: &mut OpState,
-	args: JsValue,
-	_buf: Option<JsBuffer>,
-) -> Result<JsValue, deno_core::error::AnyError> {
-	let entry = ResultResource { json_value: args };
-	let resource_table = &mut state.resource_table;
-	let _rid = resource_table.add(entry);
-	Ok(serde_json::Value::Null)
 }

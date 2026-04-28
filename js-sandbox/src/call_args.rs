@@ -1,6 +1,5 @@
 // Copyright (c) 2020-2023 js-sandbox contributors. Zlib license.
 
-use crate::AnyError;
 use serde::Serialize;
 
 /// Sealing token
@@ -14,12 +13,12 @@ mod private {
 /// Use structs or arrays inside a one-element tuple if you need more flexibility.
 pub trait CallArgs: private::Sealed {
 	/// Convert the arguments into a JSON string
-	fn into_arg_string(self) -> Result<String, AnyError>;
+	fn into_arg_string(self) -> Result<String, serde_json::Error>;
 }
 
 impl private::Sealed for () {}
 impl CallArgs for () {
-	fn into_arg_string(self) -> Result<String, AnyError> {
+	fn into_arg_string(self) -> Result<String, serde_json::Error> {
 		Ok(String::new())
 	}
 }
@@ -33,7 +32,7 @@ macro_rules! impl_call_args {
 		impl<$($param),+> CallArgs for ($($param),+,)
 			where $($param : Serialize),+
 		{
-			fn into_arg_string(self) -> Result<String, AnyError> {
+			fn into_arg_string(self) -> Result<String, serde_json::Error> {
 				let ($($param),+,) = self;
 				let args = [
 					$(

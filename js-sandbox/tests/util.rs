@@ -8,10 +8,8 @@ pub fn expect_error<T>(result: Result<T, JsError>, error_type: &str) {
 		Err(e) => e,
 	};
 
-	if let JsError::Runtime(e) = err {
-		let err = e
-			.downcast_ref::<deno_core::error::JsError>()
-			.unwrap_or_else(|| panic!("{error_type} must lead to deno_core::error::JsError type"));
-		println!("Expected error occurred:\n{err}");
+	match &err {
+		JsError::Runtime(_) => println!("Expected error occurred:\n{err}"),
+		other => panic!("{error_type} must lead to a JS runtime error, got: {other:?}"),
 	}
 }
