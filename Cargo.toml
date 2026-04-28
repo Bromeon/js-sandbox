@@ -1,5 +1,8 @@
 # Copyright (c) 2020-2023 js-sandbox contributors. Zlib license.
 
+[workspace.lints.clippy]
+tabs_in_doc_comments = "allow"
+
 [workspace]
 resolver = "2"
 members = [

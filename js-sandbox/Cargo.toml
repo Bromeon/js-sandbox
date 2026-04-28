@@ -11,6 +11,9 @@ license = "Zlib"
 edition = "2021"
 readme = "../ReadMe.md"
 
+[lints]
+workspace = true
+
 [dependencies]
 js-sandbox-macros = { path = "../js-sandbox-macros", version = "=0.2.0-rc.2" }
 deno_core = "0.400.0"
