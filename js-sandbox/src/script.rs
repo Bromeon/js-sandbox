@@ -4,7 +4,7 @@ use std::path::Path;
 use std::rc::Rc;
 use std::{thread, time::Duration};
 
-use deno_core::{serde_v8, v8, FastString, JsRuntime};
+use deno_core::{serde_v8, v8, FastString, JsRuntime, ModuleLoader, NoopModuleLoader};
 use serde::de::DeserializeOwned;
 
 use crate::{CallArgs, JsError, JsValue};
@@ -34,8 +34,11 @@ impl Script {
 	/// Initialize a script with the given JavaScript source code.
 	///
 	/// Returns a new object on success, and an error in case of syntax or initialization error with the code.
+	///
+	/// The script runs with a deny-all module loader: dynamic `import(...)` from JavaScript is rejected.
+	/// Use [`Self::from_string_with_loader()`] to provide a custom [`ModuleLoader`].
 	pub fn from_string(js_code: &str) -> Result<Self, JsError> {
-		Self::create_script(js_code.to_string())
+		Self::create_script(js_code.to_string(), Rc::new(NoopModuleLoader))
 	}
 
 	/// Initialize a script by loading it from a .js file.
@@ -44,11 +47,29 @@ impl Script {
 	/// At the moment, a script is limited to a single file, and you will need to do bundling yourself (e.g. with `esbuild`).
 	///
 	/// Returns a new object on success. Fails if the file cannot be opened or in case of syntax or initialization error with the code.
+	///
+	/// As with [`Self::from_string()`], dynamic `import(...)` from JavaScript is rejected.
 	pub fn from_file(file: impl AsRef<Path>) -> Result<Self, JsError> {
 		match std::fs::read_to_string(file) {
-			Ok(js_code) => Self::create_script(js_code),
+			Ok(js_code) => Self::create_script(js_code, Rc::new(NoopModuleLoader)),
 			Err(e) => Err(JsError::from(e)),
 		}
+	}
+
+	/// Initialize a script with a custom [`ModuleLoader`], enabling JavaScript `import(...)`.
+	///
+	/// # Security
+	/// The default constructors deliberately reject all dynamic imports, because `deno_core`'s built-in
+	/// [`deno_core::FsModuleLoader`] reads arbitrary host files and exposes them to JS via import attributes
+	/// such as `{ with: { type: "text" } }`, fully bypassing the sandbox.
+	///
+	/// Passing a loader here re-enables that mechanism. The caller is responsible for ensuring the loader
+	/// only resolves trusted specifiers. **Do not pass `FsModuleLoader` if the JS code is untrusted.**
+	pub fn from_string_with_loader(
+		js_code: &str,
+		module_loader: Rc<dyn ModuleLoader>,
+	) -> Result<Self, JsError> {
+		Self::create_script(js_code.to_string(), module_loader)
 	}
 
 	/// Equips this script with a timeout, meaning that any function call is aborted after the specified duration.
@@ -129,12 +150,12 @@ impl Script {
 		Ok(value)
 	}
 
-	fn create_script<S>(js_code: S) -> Result<Self, JsError>
+	fn create_script<S>(js_code: S, module_loader: Rc<dyn ModuleLoader>) -> Result<Self, JsError>
 	where
 		S: Into<FastString>,
 	{
 		let mut runtime = JsRuntime::new(deno_core::RuntimeOptions {
-			module_loader: Some(Rc::new(deno_core::FsModuleLoader)),
+			module_loader: Some(module_loader),
 			..Default::default()
 		});
 

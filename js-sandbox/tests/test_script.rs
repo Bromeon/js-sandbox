@@ -253,3 +253,55 @@ fn call_async() {
 
 	assert_eq!(result, 3);
 }
+
+// Regression test for sandbox bypass via `deno_core::FsModuleLoader` (issue #32).
+//
+// Before the fix, `await import("file:///...", { with: { type: "text" } })` resolved through the default FS loader and
+// exfiltrated host file contents to attacker-controlled JS. The default constructors must reject dynamic imports.
+#[test]
+fn dynamic_import_is_blocked() {
+	use std::io::Write;
+
+	struct TempFile(std::path::PathBuf);
+	impl Drop for TempFile {
+		fn drop(&mut self) {
+			let _ = std::fs::remove_file(&self.0);
+		}
+	}
+
+	// Create a host file with secret contents in the OS temp dir.
+	// Wrapped in a Drop guard so the file is removed even if an assertion below panics.
+	let mut path = std::env::temp_dir();
+	path.push("js-sandbox-test-secret.txt");
+	{
+		let mut f = std::fs::File::create(&path).expect("create secret file");
+		f.write_all(b"TOP_SECRET_VALUE").expect("write secret");
+	}
+	let _guard = TempFile(path.clone());
+	let url = format!("file://{}", path.display());
+
+	let js_code = format!(
+		r#"
+		async function exfiltrator() {{
+			const mod = await import("{url}", {{ with: {{ type: "text" }} }});
+			return mod.default;
+		}}
+		"#
+	);
+
+	let mut script = Script::from_string(&js_code).expect("init succeeds");
+	let result: Result<String, JsError> = script.call("exfiltrator", ());
+
+	let err = match result {
+		Ok(leaked) => {
+			panic!("Sandbox bypass: dynamic import returned host file contents: {leaked:?}")
+		}
+		Err(e) => e,
+	};
+
+	let msg = err.to_string();
+	assert!(
+		!msg.contains("TOP_SECRET_VALUE"),
+		"Error message must not leak file contents: {msg}"
+	);
+}
